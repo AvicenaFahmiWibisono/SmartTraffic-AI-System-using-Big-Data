@@ -1,4 +1,5 @@
 # SmartTraffic AI System
+veh-counter.f-host.site
 
 An advanced **Edge/IoT Big Data** solution designed for real-time traffic monitoring, analysis, and decision support. By leveraging state-of-the-art Computer Vision (YOLOv8) and distributed processing patterns, the system transforms raw video streams into actionable insights.
 
