@@ -1,0 +1,11 @@
+[
+  {
+    "id": "cam_demo",
+    "name": "Demo Camera",
+    "url": "https://example.com/stream.m3u8",
+    "lat": -6.200000,
+    "lng": 106.816666,
+    "active": true,
+    "count_line": { "type": "horizontal", "pos": 0.6 }
+  }
+]

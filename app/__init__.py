@@ -24,4 +24,6 @@ def create_app():
     from app.routes import bp
     app.register_blueprint(bp)
     
+    start_camera_agents()
+    
     return app

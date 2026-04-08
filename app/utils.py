@@ -385,6 +385,13 @@ def get_datalake_stats(date_str=None):
 
 def load_config():
     if not os.path.exists(CONFIG_FILE):
+        example_path = os.path.join(os.path.dirname(CONFIG_FILE), "cctv_config.example.json")
+        if os.path.exists(example_path):
+            try:
+                with open(example_path, 'r') as f:
+                    return json.load(f)
+            except Exception:
+                return []
         return []
     try:
         with open(CONFIG_FILE, 'r') as f:
@@ -438,6 +445,18 @@ def load_stats():
             print(f"[ERROR] Failed to load stats from {file_path}: {e}")
             # Continue to try backup if this was main file
             
+    example_path = os.path.join(os.path.dirname(STATS_FILE), "traffic_stats.example.json")
+    if os.path.exists(example_path):
+        try:
+            with open(example_path, 'r') as f:
+                data = json.load(f)
+            stats = data.get("sources", {}) if isinstance(data, dict) else {}
+            for src_id, src_data in stats.items():
+                if isinstance(src_data, dict) and "history" in src_data:
+                    src_data["history"] = deque(src_data["history"], maxlen=HISTORY_MAX_LEN)
+            return stats
+        except Exception:
+            return {}
     return {}
 
 def save_stats():
@@ -489,9 +508,23 @@ def save_stats():
             "window_stats": window_stats,
             "last_update": time.time()
         }
+
+        try:
+            if os.path.exists(STATS_FILE):
+                with open(STATS_FILE, 'r') as f:
+                    existing_text = f.read()
+                existing_data, _ = json.JSONDecoder().raw_decode(existing_text)
+                if isinstance(existing_data, dict):
+                    existing_global = existing_data.get("global_total")
+                    if isinstance(existing_global, dict):
+                        existing_acc = existing_global.get("accumulated_count")
+                        if isinstance(existing_acc, (int, float)) and existing_acc > 0 and global_accumulated < existing_acc:
+                            return
+        except Exception:
+            pass
         
         # Atomic Write: Write to temp -> Move to final
-        temp_file = STATS_FILE + ".tmp"
+        temp_file = f"{STATS_FILE}.{os.getpid()}.tmp"
         backup_file = STATS_FILE + ".bak"
         
         # Write to temp file first

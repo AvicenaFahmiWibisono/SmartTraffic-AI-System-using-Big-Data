@@ -7,6 +7,7 @@ camera_agents = {}
 
 # Video Feed State
 VIDEO_SOURCE = ""
+ACTIVE_CAMERA_ID = None
 outputFrame = None
 
 # Locks
@@ -15,3 +16,5 @@ model_lock = threading.Lock()
 
 # YOLO Instance (Lazy loaded)
 yolo_model_instance = None
+yolo_model_path = None
+yolo_model_loaded_ts = None

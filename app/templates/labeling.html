@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tools Labeling - SmartTraffic AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-200 p-4">
+    <nav class="bg-slate-900/70 border border-slate-800 rounded-2xl px-6 py-4 sticky top-4 z-50 backdrop-blur-xl shadow-2xl shadow-black/20 max-w-7xl mx-auto">
+        <div class="flex flex-wrap justify-between items-center">
+            <div class="flex items-center">
+                <img src="/static/img/logo.png" alt="SmartTraffic AI Logo" class="h-14 w-auto rounded-lg shadow-lg shadow-cyan-500/20 border border-white/10">
+            </div>
+            <button id="mobile-menu-btn" class="md:hidden text-white p-2 rounded-lg hover:bg-white/10 transition-colors">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
+            <div id="mobile-menu" class="hidden md:flex w-full md:w-auto flex-col md:flex-row items-center gap-3 mt-4 md:mt-0 transition-all duration-300">
+                <a href="/dashboard" class="w-full md:w-auto justify-center px-4 py-2 bg-slate-800/50 hover:bg-slate-700 text-indigo-300 hover:text-white rounded-lg text-sm font-medium transition-all flex items-center gap-2 border border-slate-700 hover:border-indigo-500/50">
+                    <i class="fas fa-chart-pie"></i> Dashboard
+                </a>
+                <a href="/labeling" class="w-full md:w-auto justify-center px-4 py-2 bg-emerald-600/20 hover:bg-slate-700 text-emerald-300 hover:text-white rounded-lg text-sm font-medium transition-all flex items-center gap-2 border border-emerald-500/40 hover:border-emerald-500/50">
+                    <i class="fas fa-pen-to-square"></i> Labeling
+                </a>
+                <a href="/training" class="w-full md:w-auto justify-center px-4 py-2 bg-slate-800/50 hover:bg-slate-700 text-purple-300 hover:text-white rounded-lg text-sm font-medium transition-all flex items-center gap-2 border border-slate-700 hover:border-purple-500/50">
+                    <i class="fas fa-dumbbell"></i> Training
+                </a>
+                <a href="/documentation" class="w-full md:w-auto justify-center px-4 py-2 bg-slate-800/50 hover:bg-slate-700 text-gray-400 hover:text-white rounded-lg border border-slate-700 transition-all" title="Documentation">
+                    <i class="fas fa-book"></i> <span class="md:hidden">Documentation</span>
+                </a>
+                <div class="w-full md:w-auto text-center md:text-right md:ml-2 md:border-l md:border-slate-700 md:pl-4 mt-2 md:mt-0">
+                    <p class="text-sm font-bold text-white" id="current-time">--:--</p>
+                    <p class="text-[10px] text-gray-500 uppercase tracking-wider" id="current-date">--/--/----</p>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto space-y-4 mt-6">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <div class="text-lg font-semibold">Tools Labeling</div>
+                <div class="text-xs text-slate-400">Capture frame dari CCTV lalu label Mobil / Motor dalam format YOLO</div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="refresh-list" class="px-3 py-2 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm flex items-center gap-2">
+                    <i class="fas fa-rotate"></i> Refresh
+                </button>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div class="lg:col-span-1 space-y-4">
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+                    <div class="text-sm font-semibold mb-3">Kamera</div>
+                    <select id="camera-select" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm"></select>
+                    <div class="mt-3 flex gap-2">
+                        <button id="load-camera" class="flex-1 px-3 py-2 rounded bg-blue-600 hover:bg-blue-500 text-white text-sm">Load</button>
+                        <button id="capture-btn" class="flex-1 px-3 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-sm">Capture</button>
+                    </div>
+                    <div class="mt-2 text-xs text-slate-400" id="camera-hint">Pilih kamera lalu klik Load</div>
+                </div>
+                
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+                    <div class="text-sm font-semibold mb-3">Label</div>
+                    <div class="flex items-center gap-2">
+                        <select id="class-select" class="flex-1 bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">
+                            <option value="0">Mobil (0)</option>
+                            <option value="1">Motor (1)</option>
+                        </select>
+                        <button id="undo-btn" class="px-3 py-2 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm">Undo</button>
+                        <button id="clear-btn" class="px-3 py-2 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm">Clear</button>
+                    </div>
+                    <div class="mt-3 flex gap-2">
+                        <button id="save-btn" class="flex-1 px-3 py-2 rounded bg-purple-600 hover:bg-purple-500 text-white text-sm">Save</button>
+                        <button id="resume-btn" class="flex-1 px-3 py-2 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm">Resume Video</button>
+                    </div>
+                    <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <button id="auto-btn" class="px-3 py-2 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm">Auto-suggest</button>
+                        <button id="export-btn" class="px-3 py-2 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm">Export Dataset</button>
+                    </div>
+                    <div class="mt-3 flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-2 text-xs text-slate-400">
+                            <input id="auto-on-capture" type="checkbox" class="accent-emerald-500">
+                            <label for="auto-on-capture">Auto saat capture</label>
+                        </div>
+                        <div class="flex items-center gap-2 text-xs text-slate-400">
+                            <span>Conf</span>
+                            <input id="preconf" type="range" min="0.05" max="0.60" step="0.01" value="0.15" class="w-28">
+                            <span id="preconf-val" class="w-10 text-right">0.15</span>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex items-center justify-between gap-3">
+                        <div class="text-xs text-slate-400">Zoom</div>
+                        <input id="zoom-range" type="range" min="1" max="4" step="0.1" value="1" class="flex-1">
+                        <div id="zoom-val" class="text-xs text-slate-400 w-10 text-right">1.0x</div>
+                    </div>
+                    <div class="mt-3 flex items-center gap-2">
+                        <button id="roi-set" class="px-3 py-2 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm">Set ROI</button>
+                        <button id="roi-fit" class="px-3 py-2 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm">Fit ROI</button>
+                        <button id="roi-clear" class="px-3 py-2 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm">Clear ROI</button>
+                    </div>
+                    <div class="mt-3 text-xs text-slate-400">Drag untuk buat bbox. Save akan simpan JPG + TXT YOLO.</div>
+                    <div class="mt-1 text-xs text-slate-400">Shift+drag untuk pan saat zoom. Set ROI untuk fokus area.</div>
+                    <div class="mt-3 text-xs text-slate-400" id="save-status"></div>
+                    <div class="mt-3 space-y-2" id="boxes-list"></div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-2 space-y-4">
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 relative overflow-hidden">
+                    <div class="flex items-center justify-between gap-3 mb-2">
+                        <div class="text-sm font-semibold" id="viewer-title">Viewer</div>
+                        <div class="text-xs text-slate-400" id="viewer-meta"></div>
+                    </div>
+                    <div class="relative w-full bg-black rounded-lg overflow-hidden">
+                        <video id="video" class="w-full h-auto block" autoplay muted playsinline></video>
+                        <canvas id="canvas" class="absolute inset-0 w-full h-full"></canvas>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="text-sm font-semibold">Hasil Labeling</div>
+                        <div class="text-xs text-slate-400">Maks 200 terakhir</div>
+                    </div>
+                    <div class="space-y-2" id="saved-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let activeCameraId = null;
+        let hls = null;
+        let capturedDataUrl = null;
+        let baseImage = null;
+        let boxes = [];
+        let drawing = false;
+        let startX = 0;
+        let startY = 0;
+        let currentRect = null;
+        let drawMode = 'box';
+        let panning = false;
+        let panStart = null;
+        let roiMode = false;
+        let roiRect = null;
+        let view = { zoom: 1.0, cx: 0.5, cy: 0.5 };
+
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        function fitCanvasToVideo() {
+            const rect = video.getBoundingClientRect();
+            const w = Math.max(1, Math.floor(rect.width));
+            const h = Math.max(1, Math.floor(rect.height));
+            if (canvas.width !== w) canvas.width = w;
+            if (canvas.height !== h) canvas.height = h;
+        }
+
+        function clamp(val, min, max) {
+            return Math.max(min, Math.min(max, val));
+        }
+
+        function getSrcRect() {
+            if (!baseImage) {
+                return { imgW: 1, imgH: 1, sx: 0, sy: 0, sw: 1, sh: 1 };
+            }
+            const imgW = baseImage.naturalWidth || 1;
+            const imgH = baseImage.naturalHeight || 1;
+            const zoom = clamp(view.zoom || 1, 1, 8);
+            const sw = imgW / zoom;
+            const sh = imgH / zoom;
+            const cx = clamp(view.cx || 0.5, 0, 1) * imgW;
+            const cy = clamp(view.cy || 0.5, 0, 1) * imgH;
+            let sx = cx - sw / 2;
+            let sy = cy - sh / 2;
+            sx = clamp(sx, 0, imgW - sw);
+            sy = clamp(sy, 0, imgH - sh);
+            return { imgW, imgH, sx, sy, sw, sh };
+        }
+
+        function canvasToGlobal(x, y) {
+            const r = getSrcRect();
+            const lx = clamp(x / canvas.width, 0, 1);
+            const ly = clamp(y / canvas.height, 0, 1);
+            const px = r.sx + lx * r.sw;
+            const py = r.sy + ly * r.sh;
+            return { xn: clamp(px / r.imgW, 0, 1), yn: clamp(py / r.imgH, 0, 1) };
+        }
+
+        function globalToCanvas(xn, yn) {
+            const r = getSrcRect();
+            const px = xn * r.imgW;
+            const py = yn * r.imgH;
+            const lx = (px - r.sx) / r.sw;
+            const ly = (py - r.sy) / r.sh;
+            return { x: lx * canvas.width, y: ly * canvas.height, lx, ly };
+        }
+
+        function render() {
+            fitCanvasToVideo();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (baseImage) {
+                const r = getSrcRect();
+                ctx.drawImage(baseImage, r.sx, r.sy, r.sw, r.sh, 0, 0, canvas.width, canvas.height);
+            }
+            for (const b of boxes) {
+                const p1 = globalToCanvas(b.x1, b.y1);
+                const p2 = globalToCanvas(b.x2, b.y2);
+                if (p2.lx < 0 || p1.lx > 1 || p2.ly < 0 || p1.ly > 1) continue;
+                const x1 = p1.x;
+                const y1 = p1.y;
+                const x2 = p2.x;
+                const y2 = p2.y;
+                const w = x2 - x1;
+                const h = y2 - y1;
+                const color = b.cls === 1 ? '#60a5fa' : '#22c55e';
+                const label = b.cls === 1 ? 'Motor' : 'Mobil';
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x1, y1, w, h);
+                ctx.fillStyle = 'rgba(0,0,0,0.6)';
+                ctx.fillRect(x1, Math.max(0, y1 - 18), 70, 18);
+                ctx.fillStyle = '#fff';
+                ctx.font = '12px Inter, sans-serif';
+                ctx.fillText(label, x1 + 6, Math.max(12, y1 - 5));
+            }
+
+            if (roiRect) {
+                const p1 = globalToCanvas(roiRect.x1, roiRect.y1);
+                const p2 = globalToCanvas(roiRect.x2, roiRect.y2);
+                const x1 = p1.x;
+                const y1 = p1.y;
+                const x2 = p2.x;
+                const y2 = p2.y;
+                ctx.strokeStyle = '#f59e0b';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+            }
+
+            if (currentRect) {
+                const color = drawMode === 'roi' ? '#f59e0b' : (currentRect.cls === 1 ? '#60a5fa' : '#22c55e');
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.strokeRect(currentRect.x, currentRect.y, currentRect.w, currentRect.h);
+            }
+        }
+
+        function setStatus(msg) {
+            document.getElementById('save-status').innerText = msg || '';
+        }
+
+        function updateBoxesList() {
+            const list = document.getElementById('boxes-list');
+            list.innerHTML = '';
+            boxes.forEach((b, idx) => {
+                const item = document.createElement('div');
+                item.className = 'flex items-center justify-between gap-2 text-xs bg-slate-950 border border-slate-800 rounded px-2 py-1';
+                const name = b.cls === 1 ? 'Motor' : 'Mobil';
+                item.innerHTML = `<div>#${idx+1} ${name} (${b.x1.toFixed(3)}, ${b.y1.toFixed(3)})-(${b.x2.toFixed(3)}, ${b.y2.toFixed(3)})</div>`;
+                const btn = document.createElement('button');
+                btn.className = 'px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700';
+                btn.innerText = 'Remove';
+                btn.onclick = () => {
+                    boxes.splice(idx, 1);
+                    updateBoxesList();
+                    render();
+                };
+                item.appendChild(btn);
+                list.appendChild(item);
+            });
+        }
+
+        function stopHls() {
+            try {
+                if (hls) hls.destroy();
+            } catch(e) {}
+            hls = null;
+        }
+
+        function loadCamera(cameraId) {
+            activeCameraId = cameraId;
+            stopHls();
+            const src = `/hls/${cameraId}/index.m3u8?t=${Date.now()}`;
+            if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = src;
+                video.play().catch(() => {});
+            } else if (window.Hls && Hls.isSupported()) {
+                hls = new Hls({ lowLatencyMode: true, enableWorker: true, backBufferLength: 30, maxBufferLength: 30, liveSyncDurationCount: 3 });
+                hls.loadSource(src);
+                hls.attachMedia(video);
+                video.play().catch(() => {});
+            } else {
+                alert('Browser tidak mendukung HLS');
+            }
+            document.getElementById('viewer-title').innerText = `Viewer: ${cameraId}`;
+            setStatus('');
+            capturedDataUrl = null;
+            baseImage = null;
+            boxes = [];
+            updateBoxesList();
+            render();
+        }
+
+        async function fetchSources() {
+            const resp = await fetch('/api/sources', { cache: 'no-store' });
+            const sources = await resp.json();
+            const select = document.getElementById('camera-select');
+            select.innerHTML = '';
+            let first = null;
+            let active = null;
+            sources.forEach(s => {
+                if (!first) first = s.id;
+                if (s.active) active = s.id;
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.innerText = s.name;
+                select.appendChild(opt);
+            });
+            const useId = active || first;
+            if (useId) {
+                select.value = useId;
+                loadCamera(useId);
+            }
+        }
+
+        function captureFrame() {
+            if (!activeCameraId) return;
+            if (video.readyState < 2) {
+                setStatus('Video belum siap untuk capture');
+                return;
+            }
+            const w = video.videoWidth;
+            const h = video.videoHeight;
+            if (!w || !h) {
+                setStatus('Resolusi video belum terbaca');
+                return;
+            }
+            const temp = document.createElement('canvas');
+            temp.width = w;
+            temp.height = h;
+            const tctx = temp.getContext('2d');
+            tctx.drawImage(video, 0, 0, w, h);
+            capturedDataUrl = temp.toDataURL('image/jpeg', 0.92);
+            baseImage = new Image();
+            baseImage.onload = () => {
+                boxes = [];
+                roiRect = null;
+                roiMode = false;
+                view = { zoom: 1.0, cx: 0.5, cy: 0.5 };
+                const zoomEl = document.getElementById('zoom-range');
+                const zoomVal = document.getElementById('zoom-val');
+                if (zoomEl) zoomEl.value = '1';
+                if (zoomVal) zoomVal.innerText = '1.0x';
+                updateBoxesList();
+                render();
+                setStatus('Captured. Drag untuk labeling.');
+                const autoOn = document.getElementById('auto-on-capture');
+                if (autoOn && autoOn.checked) {
+                    autoSuggest();
+                }
+            };
+            baseImage.src = capturedDataUrl;
+        }
+
+        function resumeVideo() {
+            capturedDataUrl = null;
+            baseImage = null;
+            boxes = [];
+            updateBoxesList();
+            render();
+            setStatus('');
+        }
+
+        function fitRoi() {
+            if (!baseImage || !roiRect) return;
+            const imgW = baseImage.naturalWidth || 1;
+            const imgH = baseImage.naturalHeight || 1;
+            const rw = Math.max(0.01, roiRect.x2 - roiRect.x1);
+            const rh = Math.max(0.01, roiRect.y2 - roiRect.y1);
+            const zoomX = 1 / rw;
+            const zoomY = 1 / rh;
+            view.zoom = clamp(Math.min(zoomX, zoomY), 1, 8);
+            view.cx = clamp((roiRect.x1 + roiRect.x2) / 2, 0, 1);
+            view.cy = clamp((roiRect.y1 + roiRect.y2) / 2, 0, 1);
+            const zoomEl = document.getElementById('zoom-range');
+            const zoomVal = document.getElementById('zoom-val');
+            if (zoomEl) zoomEl.value = String(view.zoom);
+            if (zoomVal) zoomVal.innerText = `${view.zoom.toFixed(1)}x`;
+            render();
+        }
+
+        function clearRoi() {
+            roiRect = null;
+            roiMode = false;
+            render();
+        }
+
+        async function autoSuggest() {
+            if (!capturedDataUrl) {
+                setStatus('Capture dulu sebelum Auto-suggest');
+                return;
+            }
+            const confEl = document.getElementById('preconf');
+            const conf = confEl ? parseFloat(confEl.value) : 0.15;
+            setStatus('Auto-suggest...');
+            const resp = await fetch('/api/labeling/predict', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image_data: capturedDataUrl, conf })
+            });
+            const json = await resp.json();
+            if (!json || json.status !== 'success') {
+                setStatus(json && json.message ? json.message : 'Auto-suggest gagal');
+                return;
+            }
+            const items = (json.items || []).slice(0, 80);
+            boxes = items.map(it => ({
+                x1: it.x1,
+                y1: it.y1,
+                x2: it.x2,
+                y2: it.y2,
+                cls: it.cls
+            }));
+            updateBoxesList();
+            render();
+            setStatus(`Auto-suggest selesai (${boxes.length} box).`);
+        }
+
+        async function exportDataset() {
+            setStatus('Exporting dataset...');
+            const now = new Date();
+            const name = `export_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
+            const resp = await fetch('/api/labeling/export', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+            const json = await resp.json();
+            if (!json || json.status !== 'success') {
+                setStatus(json && json.message ? json.message : 'Export gagal');
+                return;
+            }
+            const c = json.counts || {};
+            setStatus(`Export OK: ${json.export_root} (train ${c.train||0}, valid ${c.valid||0}, test ${c.test||0})`);
+        }
+
+        function getPointerPos(evt) {
+            const r = canvas.getBoundingClientRect();
+            const x = (evt.clientX - r.left);
+            const y = (evt.clientY - r.top);
+            return { x, y };
+        }
+
+        canvas.addEventListener('mousedown', (evt) => {
+            if (!baseImage) return;
+            const p = getPointerPos(evt);
+            if (evt.shiftKey) {
+                panning = true;
+                panStart = { x: p.x, y: p.y, cx: view.cx, cy: view.cy };
+                return;
+            }
+            drawing = true;
+            drawMode = roiMode ? 'roi' : 'box';
+            startX = p.x;
+            startY = p.y;
+            currentRect = { x: startX, y: startY, w: 0, h: 0, cls: parseInt(document.getElementById('class-select').value) };
+        });
+
+        canvas.addEventListener('mousemove', (evt) => {
+            const p = getPointerPos(evt);
+            if (panning && panStart) {
+                const r = getSrcRect();
+                const dx = p.x - panStart.x;
+                const dy = p.y - panStart.y;
+                const fracX = (dx / canvas.width) * (r.sw / r.imgW);
+                const fracY = (dy / canvas.height) * (r.sh / r.imgH);
+                view.cx = clamp(panStart.cx - fracX, 0, 1);
+                view.cy = clamp(panStart.cy - fracY, 0, 1);
+                render();
+                return;
+            }
+            if (!drawing || !currentRect) return;
+            currentRect.w = p.x - startX;
+            currentRect.h = p.y - startY;
+            render();
+        });
+
+        canvas.addEventListener('mouseup', (evt) => {
+            if (panning) {
+                panning = false;
+                panStart = null;
+                return;
+            }
+            if (!drawing || !currentRect) return;
+            drawing = false;
+            const x1 = Math.min(currentRect.x, currentRect.x + currentRect.w);
+            const y1 = Math.min(currentRect.y, currentRect.y + currentRect.h);
+            const x2 = Math.max(currentRect.x, currentRect.x + currentRect.w);
+            const y2 = Math.max(currentRect.y, currentRect.y + currentRect.h);
+            const w = x2 - x1;
+            const h = y2 - y1;
+            const minPx = 8;
+            if (w >= minPx && h >= minPx) {
+                const g1 = canvasToGlobal(x1, y1);
+                const g2 = canvasToGlobal(x2, y2);
+                if (drawMode === 'roi') {
+                    roiRect = { x1: g1.xn, y1: g1.yn, x2: g2.xn, y2: g2.yn };
+                    roiMode = false;
+                    setStatus('ROI set.');
+                } else {
+                    boxes.push({
+                        x1: g1.xn,
+                        y1: g1.yn,
+                        x2: g2.xn,
+                        y2: g2.yn,
+                        cls: currentRect.cls
+                    });
+                    updateBoxesList();
+                }
+            }
+            currentRect = null;
+            render();
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            if (panning) {
+                panning = false;
+                panStart = null;
+            }
+            if (drawing) {
+                drawing = false;
+                currentRect = null;
+            }
+            render();
+        });
+
+        async function saveLabeling() {
+            if (!activeCameraId) return;
+            if (!capturedDataUrl) {
+                setStatus('Capture dulu sebelum Save');
+                return;
+            }
+            setStatus('Saving...');
+            const resp = await fetch('/api/labeling/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ camera_id: activeCameraId, image_data: capturedDataUrl, boxes })
+            });
+            const json = await resp.json();
+            if (!json || json.status !== 'success') {
+                setStatus(json && json.message ? json.message : 'Save gagal');
+                return;
+            }
+            setStatus(`Saved (${json.boxes_saved} box).`);
+            await loadSavedList();
+        }
+
+        async function loadSavedList() {
+            const list = document.getElementById('saved-list');
+            list.innerHTML = '';
+            const resp = await fetch('/api/labeling/list', { cache: 'no-store' });
+            const json = await resp.json();
+            if (!json || json.status !== 'success') return;
+            json.items.forEach(it => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center justify-between gap-2 text-xs bg-slate-950 border border-slate-800 rounded px-3 py-2';
+                const left = document.createElement('div');
+                left.className = 'truncate';
+                left.innerText = it.stem;
+                const right = document.createElement('div');
+                right.className = 'flex items-center gap-2';
+                const a1 = document.createElement('a');
+                a1.href = it.image_url;
+                a1.target = '_blank';
+                a1.className = 'px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700';
+                a1.innerText = 'JPG';
+                const a2 = document.createElement('a');
+                a2.href = it.label_url || '#';
+                a2.target = '_blank';
+                a2.className = 'px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700';
+                a2.innerText = 'TXT';
+                right.appendChild(a1);
+                right.appendChild(a2);
+                row.appendChild(left);
+                row.appendChild(right);
+                list.appendChild(row);
+            });
+        }
+
+        document.getElementById('load-camera').onclick = () => {
+            const id = document.getElementById('camera-select').value;
+            if (id) loadCamera(id);
+        };
+        document.getElementById('capture-btn').onclick = captureFrame;
+        document.getElementById('resume-btn').onclick = resumeVideo;
+        document.getElementById('save-btn').onclick = saveLabeling;
+        document.getElementById('auto-btn').onclick = autoSuggest;
+        document.getElementById('export-btn').onclick = exportDataset;
+        document.getElementById('undo-btn').onclick = () => {
+            boxes.pop();
+            updateBoxesList();
+            render();
+        };
+        document.getElementById('clear-btn').onclick = () => {
+            boxes = [];
+            updateBoxesList();
+            render();
+        };
+        document.getElementById('refresh-list').onclick = loadSavedList;
+
+        document.getElementById('zoom-range').oninput = (e) => {
+            const z = parseFloat(e.target.value);
+            view.zoom = clamp(isNaN(z) ? 1.0 : z, 1, 8);
+            document.getElementById('zoom-val').innerText = `${view.zoom.toFixed(1)}x`;
+            render();
+        };
+
+        document.getElementById('preconf').oninput = (e) => {
+            const v = parseFloat(e.target.value);
+            document.getElementById('preconf-val').innerText = (isNaN(v) ? 0.15 : v).toFixed(2);
+        };
+
+        document.getElementById('roi-set').onclick = () => {
+            if (!baseImage) {
+                setStatus('Capture dulu sebelum set ROI');
+                return;
+            }
+            roiMode = true;
+            setStatus('Drag untuk set ROI');
+        };
+
+        document.getElementById('roi-fit').onclick = () => {
+            fitRoi();
+        };
+
+        document.getElementById('roi-clear').onclick = () => {
+            clearRoi();
+        };
+
+        window.addEventListener('resize', () => render());
+        fetchSources().then(loadSavedList);
+
+        function updateClock() {
+            const now = new Date();
+            const t = document.getElementById('current-time');
+            const d = document.getElementById('current-date');
+            if (t) t.innerText = now.toLocaleTimeString();
+            if (d) d.innerText = now.toLocaleDateString();
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        const mobileBtn = document.getElementById('mobile-menu-btn');
+        if (mobileBtn) {
+            mobileBtn.addEventListener('click', function() {
+                const menu = document.getElementById('mobile-menu');
+                if (!menu) return;
+                menu.classList.toggle('hidden');
+                menu.classList.toggle('flex');
+            });
+        }
+    </script>
+</body>
+</html>

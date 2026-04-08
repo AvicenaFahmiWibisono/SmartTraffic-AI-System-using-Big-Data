@@ -1,0 +1,13 @@
+{
+  "sources": {},
+  "global_total": {
+    "accumulated_count": 0,
+    "cars": 0,
+    "motorcycles": 0,
+    "current_count": 0,
+    "current_cars": 0,
+    "current_motorcycles": 0
+  },
+  "window_stats": {},
+  "last_update": 0
+}

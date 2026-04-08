@@ -1,6 +1,5 @@
 
 from app import create_app
-from app.services.camera import start_camera_agents
 from app.config import HOST_IP, HOST_PORT
 
 # Create Flask Application
@@ -8,10 +7,6 @@ app = create_app()
 
 if __name__ == "__main__":
     print(f"[INFO] Starting Vehicle Counter System...")
-    
-    # Start Camera Agents (Background Threads)
-    start_camera_agents()
-    
     print(f"[INFO] Server running on http://{HOST_IP}:{HOST_PORT}")
     
     # Run Flask Server
