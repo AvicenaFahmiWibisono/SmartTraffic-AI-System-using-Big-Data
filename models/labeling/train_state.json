@@ -1,0 +1,14 @@
+{
+  "running": false,
+  "job_id": "20260408_130750_b16f4652",
+  "pid": 1781436,
+  "export_name": "export_20260408_195825",
+  "base_model": "yolov8n.pt",
+  "imgsz": 640,
+  "epochs": 80,
+  "batch": 4,
+  "log_path": "/var/www/vehicle-counter/models/labeling/train_logs/20260408_130750_b16f4652.log",
+  "run_dir": "/var/www/vehicle-counter/models/labeling/train_runs/20260408_130750_b16f4652",
+  "start_ts": 1775653670.7674766,
+  "exit_code": -15
+}
