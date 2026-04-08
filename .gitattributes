@@ -2,3 +2,8 @@ data/*.db filter=lfs diff=lfs merge=lfs -text
 models/*.pt filter=lfs diff=lfs merge=lfs -text
 data/video/* filter=lfs diff=lfs merge=lfs -text
 runs/** filter=lfs diff=lfs merge=lfs -text
+models/**/*.pt filter=lfs diff=lfs merge=lfs -text
+yolov8*.pt filter=lfs diff=lfs merge=lfs -text
+runs/**/*.pt filter=lfs diff=lfs merge=lfs -text
+models/**/*.jpg filter=lfs diff=lfs merge=lfs -text
+models/**/*.png filter=lfs diff=lfs merge=lfs -text

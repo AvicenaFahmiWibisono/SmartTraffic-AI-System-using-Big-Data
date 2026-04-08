@@ -8,16 +8,6 @@ env/
 
 # Data & Database
 data_lake/
-data/traffic_data.db
-data/cctv_config.json
-data/traffic_stats.json
-data/traffic_stats.json.*
-data/camera_thresholds.json
-data/*.csv
-data/*.db
-data/backups/
-data/exports/
-data/video/
 data/*.tmp
 data/*.bak
 data/*.broken
@@ -30,11 +20,3 @@ stats_dump*.json
 # IDE
 .vscode/
 .idea/
-
-# Training / Runs / Artifacts
-runs/
-models/labeling/
-models/dataseet/
-models/*.pt
-models/*.pt*
-yolov8*.pt

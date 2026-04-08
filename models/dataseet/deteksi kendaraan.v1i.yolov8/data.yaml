@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 2
+names: ['mobil', 'motor']
+
+roboflow:
+  workspace: avicenas-workspace
+  project: deteksi-kendaraan-fh5hg-ckffi
+  version: 1
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/avicenas-workspace/deteksi-kendaraan-fh5hg-ckffi/dataset/1
