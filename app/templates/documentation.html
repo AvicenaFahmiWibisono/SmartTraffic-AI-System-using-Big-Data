@@ -1,0 +1,1473 @@
+{% extends "base.html" %}
+{% block title %}SmartTraffic AI - Documentation{% endblock %}
+{% block header_kicker %}Docs{% endblock %}
+{% block header_title %}System Overview{% endblock %}
+{% block header_actions %}
+    <div class="relative hidden sm:block">
+        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+        <input id="doc-search" type="text" placeholder="Search documentation..." class="bg-slate-800/40 border border-slate-700 text-sm rounded-full py-1.5 pl-9 pr-4 text-slate-300 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 w-72 transition-all">
+    </div>
+    <a href="https://github.com/vehicle-counter" target="_blank" class="text-slate-400 hover:text-white transition-colors px-3 py-2 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10">
+        <i class="fab fa-github text-xl"></i>
+    </a>
+{% endblock %}
+{% block style_extra %}
+    <style>
+        .content-card { background: rgba(30, 41, 59, 0.40); border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 0.9rem; }
+        .diagram-card {
+            background: linear-gradient(180deg, rgba(2, 6, 23, 0.55), rgba(15, 23, 42, 0.35));
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 1rem;
+            padding: 1.25rem;
+            overflow-x: auto;
+        }
+        .diagram-card .mermaid { min-width: 640px; }
+        h1, h2, h3, h4 { color: #f8fafc; letter-spacing: -0.025em; }
+        .prose-h1 { font-size: 2.25rem; font-weight: 800; }
+        .prose-h2 { font-size: 1.5rem; font-weight: 800; margin-top: 2.5rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .prose-h3 { font-size: 1.2rem; font-weight: 700; margin-top: 2rem; margin-bottom: 0.65rem; color: #e2e8f0; }
+        .prose-p { margin-bottom: 1.1rem; line-height: 1.75; color: #94a3b8; }
+        pre { background: #0b1220 !important; border: 1px solid #1e293b; border-radius: 0.75rem; padding: 1rem; overflow-x: auto; margin-bottom: 1.25rem; }
+        code { font-family: 'JetBrains Mono', monospace; font-size: 0.875rem; }
+        .inline-code { background: rgba(51, 65, 85, 0.55); color: #7dd3fc; padding: 0.12rem 0.4rem; border-radius: 0.3rem; font-size: 0.85em; font-family: 'JetBrains Mono', monospace; }
+        .doc-link { display: flex; align-items: center; padding: 0.45rem 0.75rem; color: #94a3b8; border-radius: 0.5rem; transition: all 0.2s; font-size: 0.9rem; text-decoration: none; }
+        .doc-link:hover { color: #fff; background: rgba(255,255,255,0.05); }
+        .doc-link.active { color: #38bdf8; background: rgba(56, 189, 248, 0.12); font-weight: 700; }
+        .badge { font-size: 0.7rem; font-weight: 800; padding: 0.15rem 0.4rem; border-radius: 0.25rem; margin-right: 0.5rem; }
+        .badge-get { background: rgba(16, 185, 129, 0.18); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .badge-post { background: rgba(59, 130, 246, 0.18); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+        .badge-auth { background: rgba(244, 63, 94, 0.18); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.3); }
+
+        .hero-card {
+            background:
+                radial-gradient(circle at 15% 20%, rgba(56, 189, 248, 0.12), transparent 45%),
+                radial-gradient(circle at 85% 80%, rgba(139, 92, 246, 0.10), transparent 45%),
+                linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(2, 6, 23, 0.9));
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 1.25rem;
+            padding: 2rem;
+        }
+
+        .pipeline-stage {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 0.9rem;
+            padding: 1.1rem;
+            position: relative;
+        }
+        .pipeline-stage .num {
+            position: absolute;
+            top: -10px; left: 12px;
+            width: 26px; height: 26px;
+            border-radius: 0.6rem;
+            font-size: 0.7rem; font-weight: 800;
+            display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(135deg, #0ea5e9, #6366f1);
+            color: #f8fafc;
+            border: 1px solid rgba(255,255,255,0.15);
+            letter-spacing: 0.05em;
+        }
+
+        .tag-chip { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.2rem 0.55rem; border-radius: 9999px; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.03em; border: 1px solid rgba(255,255,255,0.1); }
+        .tag-chip.cv { background: rgba(139, 92, 246, 0.14); color: #c4b5fd; border-color: rgba(139, 92, 246, 0.28); }
+        .tag-chip.dl { background: rgba(56, 189, 248, 0.14); color: #7dd3fc; border-color: rgba(56, 189, 248, 0.28); }
+        .tag-chip.bd { background: rgba(16, 185, 129, 0.14); color: #6ee7b7; border-color: rgba(16, 185, 129, 0.28); }
+        .tag-chip.ai { background: rgba(251, 146, 60, 0.14); color: #fdba74; border-color: rgba(251, 146, 60, 0.28); }
+
+        .callout { border-left: 3px solid var(--accent, #38bdf8); background: rgba(30, 41, 59, 0.35); border-radius: 0.7rem; padding: 0.95rem 1.1rem; margin: 1rem 0 1.25rem; color: #cbd5e1; }
+        .callout.info  { --accent: #38bdf8; }
+        .callout.warn  { --accent: #f59e0b; }
+        .callout.tip   { --accent: #10b981; }
+        .callout b { color: #f8fafc; }
+
+        .step-list { display: grid; gap: 0.6rem; }
+        .step-item { display: grid; grid-template-columns: 28px 1fr; gap: 0.75rem; align-items: start; }
+        .step-item .bullet {
+            width: 28px; height: 28px; border-radius: 0.6rem;
+            background: rgba(56, 189, 248, 0.12);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            color: #7dd3fc; font-size: 0.72rem; font-weight: 800;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .step-item p { color: #cbd5e1; line-height: 1.55; }
+        .step-item p b { color: #f8fafc; }
+
+        /* Legend rows for pipeline node colors */
+        .legend-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; color: #cbd5e1; }
+        .legend-dot { width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.12); }
+    </style>
+{% endblock %}
+{% block sidebar_nav %}
+    <div class="nav-section">Getting Started</div>
+    <a href="#overview" class="doc-link active">Overview</a>
+    <a href="#quickstart" class="doc-link">Quick Start</a>
+    <a href="#key-features" class="doc-link">Key Features</a>
+    <div class="nav-section">Architecture</div>
+    <a href="#pipeline" class="doc-link">Pipeline at a Glance</a>
+    <a href="#system-workflow" class="doc-link">System Workflow</a>
+    <a href="#components" class="doc-link">Core Components</a>
+    <div class="nav-section">How AI Works</div>
+    <a href="#ai-stack" class="doc-link">AI Stack</a>
+    <a href="#detection-flow" class="doc-link">Detection & Counting</a>
+    <a href="#prediction-engine" class="doc-link">Prediction Engine</a>
+    <a href="#transformer-detail" class="doc-link">Transformer Detail</a>
+    <a href="#route-congestion" class="doc-link">Route Congestion Logic</a>
+    <a href="#chatbot-flow" class="doc-link">AI Assistant Flow</a>
+    <div class="nav-section">Data & Storage</div>
+    <a href="#big-data" class="doc-link">Big Data (4 Vs)</a>
+    <a href="#data-lake" class="doc-link">Data Lake Layout</a>
+    <a href="#data-models" class="doc-link">Data Models</a>
+    <a href="#pg-demo" class="doc-link">Demo PostgreSQL</a>
+    <div class="nav-section">Developers</div>
+    <a href="#api-reference" class="doc-link">API Reference</a>
+    <a href="#config" class="doc-link">Configuration</a>
+    <a href="#faq" class="doc-link">FAQ</a>
+{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto pb-20 px-1">
+
+    <!-- Hero / Overview ========================================================= -->
+    <section id="overview" class="mb-14">
+        <div class="hero-card">
+            <div class="flex items-center gap-2 mb-4 flex-wrap">
+                <span class="tag-chip cv"><i class="fas fa-eye"></i> Computer Vision</span>
+                <span class="tag-chip dl"><i class="fas fa-brain"></i> Deep Learning</span>
+                <span class="tag-chip bd"><i class="fas fa-database"></i> Big Data</span>
+                <span class="tag-chip ai"><i class="fas fa-robot"></i> AI Assistant</span>
+            </div>
+            <h1 class="prose-h1 mb-3">SmartTraffic AI</h1>
+            <p class="text-slate-300 text-lg leading-relaxed">
+                Platform edge-computing untuk pemantauan lalu lintas real-time dan prediksi volume kendaraan.
+                Sistem mengubah <b class="text-white">stream CCTV mentah</b> menjadi <b class="text-white">insight numerik</b>
+                lewat pipeline YOLOv8 &rarr; IoU tracker &rarr; time-series database &rarr; Transformer forecaster,
+                lalu menyajikannya sebagai peta interaktif, analitik, dan agen percakapan.
+            </p>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
+                <div class="bg-slate-950/50 border border-slate-800 rounded-xl p-3">
+                    <div class="text-[10px] text-slate-500 uppercase tracking-widest">Streams</div>
+                    <div class="text-2xl font-bold text-sky-300 mt-1">37</div>
+                    <div class="text-[11px] text-slate-500">Concurrent CCTV</div>
+                </div>
+                <div class="bg-slate-950/50 border border-slate-800 rounded-xl p-3">
+                    <div class="text-[10px] text-slate-500 uppercase tracking-widest">Latency</div>
+                    <div class="text-2xl font-bold text-emerald-300 mt-1">~500ms</div>
+                    <div class="text-[11px] text-slate-500">Frame &rarr; DB</div>
+                </div>
+                <div class="bg-slate-950/50 border border-slate-800 rounded-xl p-3">
+                    <div class="text-[10px] text-slate-500 uppercase tracking-widest">Data Points</div>
+                    <div class="text-2xl font-bold text-purple-300 mt-1">455K+</div>
+                    <div class="text-[11px] text-slate-500">PostgreSQL rows</div>
+                </div>
+                <div class="bg-slate-950/50 border border-slate-800 rounded-xl p-3">
+                    <div class="text-[10px] text-slate-500 uppercase tracking-widest">Model</div>
+                    <div class="text-2xl font-bold text-amber-300 mt-1">YOLOv8</div>
+                    <div class="text-[11px] text-slate-500">+ Transformer</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pipeline at a Glance =================================================== -->
+    <section id="pipeline" class="mb-14">
+        <h2 class="prose-h2">Pipeline at a Glance</h2>
+        <p class="prose-p">
+            Empat tahap utama dari video CCTV sampai insight di dashboard. Setiap tahap berjalan sebagai
+            modul Python yang bisa di-scale terpisah.
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+            <div class="pipeline-stage">
+                <span class="num">01</span>
+                <div class="mt-2">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="fas fa-video text-sky-400"></i>
+                        <span class="font-bold text-white">Acquire</span>
+                    </div>
+                    <p class="text-slate-400 text-xs leading-relaxed">RTSP/HLS stream dibuka per kamera. Frame diambil lewat OpenCV atau fallback FFmpeg.</p>
+                </div>
+            </div>
+            <div class="pipeline-stage">
+                <span class="num">02</span>
+                <div class="mt-2">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="fas fa-brain text-purple-400"></i>
+                        <span class="font-bold text-white">Detect</span>
+                    </div>
+                    <p class="text-slate-400 text-xs leading-relaxed">YOLOv8 mendeteksi mobil &amp; motor, hasilnya di-track dengan IoU matcher supaya satu kendaraan tidak dihitung dua kali.</p>
+                </div>
+            </div>
+            <div class="pipeline-stage">
+                <span class="num">03</span>
+                <div class="mt-2">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="fas fa-database text-emerald-400"></i>
+                        <span class="font-bold text-white">Persist</span>
+                    </div>
+                    <p class="text-slate-400 text-xs leading-relaxed">Count ditulis ke PostgreSQL (time-series) dan Data Lake CSV yang di-partisi per tahun/bulan/hari.</p>
+                </div>
+            </div>
+            <div class="pipeline-stage">
+                <span class="num">04</span>
+                <div class="mt-2">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="fas fa-chart-line text-rose-400"></i>
+                        <span class="font-bold text-white">Serve</span>
+                    </div>
+                    <p class="text-slate-400 text-xs leading-relaxed">REST API + dashboard Leaflet. Prediksi hybrid (Transformer &amp; DOW/Hour average) dihitung on-demand dari PostgreSQL.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- System Workflow Diagram ================================================= -->
+    <section id="system-workflow" class="mb-14">
+        <h2 class="prose-h2">System Workflow</h2>
+        <p class="prose-p">
+            Diagram di bawah menggambarkan aliran data dari CCTV sampai ke user, termasuk proses paralel
+            seperti pelatihan Transformer di background dan sinkronisasi snapshot statistik.
+        </p>
+        <div class="diagram-card">
+            <div class="mermaid">
+flowchart LR
+    subgraph ACQ["1 - Acquisition"]
+        CCTV["CCTV<br/>RTSP / HLS"]
+        AGENT["CameraAgent<br/>thread per kamera"]
+        CCTV -->|frame buffer| AGENT
+    end
+
+    subgraph EDGE["2 - Edge AI"]
+        YOLO["YOLOv8<br/>detector"]
+        TRACK["IoU Tracker<br/>anti double-count"]
+        CLASS["Classifier<br/>car / motor"]
+        AGENT --> YOLO --> TRACK --> CLASS
+    end
+
+    subgraph STORE["3 - Persistence"]
+        PG[("PostgreSQL<br/>traffic_history")]
+        LAKE[("Data Lake CSV<br/>YYYY/MM/DD")]
+        SNAP["traffic_stats.json<br/>snapshot"]
+        CLASS -->|insert batch| PG
+        CLASS -->|raw detections| LAKE
+        CLASS -->|rolling cache| SNAP
+    end
+
+    subgraph AIML["4 - AI / ML"]
+        TRANS["Transformer<br/>Forecaster"]
+        DOWH["DOW x Hour<br/>Average"]
+        PG -.->|60 days history| TRANS
+        PG -.->|aggregated query| DOWH
+    end
+
+    subgraph APIL["5 - API"]
+        FLASK["Flask Blueprint<br/>/api/*"]
+        SNAP --> FLASK
+        PG --> FLASK
+        TRANS --> FLASK
+        DOWH --> FLASK
+    end
+
+    subgraph CLIENT["6 - Client"]
+        MAP["Leaflet Map<br/>gradient routing"]
+        CHART["Chart.js<br/>analytics"]
+        BOT["AI Assistant<br/>chatbot"]
+        FLASK -->|JSON| MAP
+        FLASK -->|JSON| CHART
+        FLASK -->|JSON + ui_actions| BOT
+    end
+
+    classDef src fill:#1d4ed8,stroke:#3b82f6,color:#fff
+    classDef ai fill:#7e22ce,stroke:#a855f7,color:#fff
+    classDef db fill:#059669,stroke:#10b981,color:#fff
+    classDef api fill:#0891b2,stroke:#22d3ee,color:#fff
+    classDef ui fill:#be123c,stroke:#f43f5e,color:#fff
+
+    class CCTV,AGENT src
+    class YOLO,TRACK,CLASS,TRANS,DOWH ai
+    class PG,LAKE,SNAP db
+    class FLASK api
+    class MAP,CHART,BOT ui
+            </div>
+        </div>
+
+        <div class="flex flex-wrap gap-4 mt-3 text-xs">
+            <div class="legend-row"><span class="legend-dot" style="background:#1d4ed8"></span>Source / Capture</div>
+            <div class="legend-row"><span class="legend-dot" style="background:#7e22ce"></span>AI / ML</div>
+            <div class="legend-row"><span class="legend-dot" style="background:#059669"></span>Storage</div>
+            <div class="legend-row"><span class="legend-dot" style="background:#0891b2"></span>API</div>
+            <div class="legend-row"><span class="legend-dot" style="background:#be123c"></span>Client UI</div>
+        </div>
+    </section>
+
+    <!-- Core Components ========================================================= -->
+    <section id="components" class="mb-14">
+        <h2 class="prose-h2">Core Components</h2>
+        <p class="prose-p">Struktur modul utama yang membangun sistem. Setiap file punya tanggung jawab tunggal sehingga mudah diuji dan di-swap.</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="content-card p-4">
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+                        <i class="fas fa-video text-emerald-400"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-white font-semibold">Camera Agent</h3>
+                        <p class="text-slate-400 text-xs">Thread per kamera, capture frame, YOLO inference, IoU tracking, persist batch ke DB.</p>
+                        <p class="text-[11px] text-slate-500 mt-2 font-mono">app/services/camera.py</p>
+                    </div>
+                </div>
+            </div>
+            <div class="content-card p-4">
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-sky-500/10 flex items-center justify-center shrink-0">
+                        <i class="fas fa-network-wired text-sky-400"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-white font-semibold">API &amp; Routes</h3>
+                        <p class="text-slate-400 text-xs">Endpoint REST untuk stats, history, prediksi, export CSV, chat, dan admin.</p>
+                        <p class="text-[11px] text-slate-500 mt-2 font-mono">app/routes.py</p>
+                    </div>
+                </div>
+            </div>
+            <div class="content-card p-4">
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
+                        <i class="fas fa-database text-amber-400"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-white font-semibold">Database Layer</h3>
+                        <p class="text-slate-400 text-xs">PostgreSQL schema, batch insert (psycopg2), history query, Transformer trainer, DOW-Hour predictor.</p>
+                        <p class="text-[11px] text-slate-500 mt-2 font-mono">app/database.py</p>
+                    </div>
+                </div>
+            </div>
+            <div class="content-card p-4">
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0">
+                        <i class="fas fa-gears text-purple-400"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-white font-semibold">Utilities</h3>
+                        <p class="text-slate-400 text-xs">Load/save config, snapshot stats, Data Lake export, backfill history.</p>
+                        <p class="text-[11px] text-slate-500 mt-2 font-mono">app/utils.py</p>
+                    </div>
+                </div>
+            </div>
+            <div class="content-card p-4">
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-slate-500/10 flex items-center justify-center shrink-0">
+                        <i class="fas fa-layer-group text-slate-300"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-white font-semibold">Global State</h3>
+                        <p class="text-slate-400 text-xs">Dictionary <span class="inline-code">global_stats</span>, list kamera, lock thread-safe.</p>
+                        <p class="text-[11px] text-slate-500 mt-2 font-mono">app/globals.py</p>
+                    </div>
+                </div>
+            </div>
+            <div class="content-card p-4">
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-rose-500/10 flex items-center justify-center shrink-0">
+                        <i class="fas fa-chart-pie text-rose-400"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-white font-semibold">Frontend Templates</h3>
+                        <p class="text-slate-400 text-xs">Monitor, Dashboard (peta &amp; routing berwarna), Analytics, Documentation.</p>
+                        <p class="text-[11px] text-slate-500 mt-2 font-mono">app/templates/*.html</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- AI Stack ================================================================ -->
+    <section id="ai-stack" class="mb-14">
+        <h2 class="prose-h2">AI Stack</h2>
+        <p class="prose-p">
+            Sistem memakai tiga lapis kecerdasan: <b>deteksi visual</b> (YOLOv8),
+            <b>forecasting time-series</b> (Transformer + fallback statistik), dan
+            <b>agen percakapan</b> (Ollama LLM opsional). Tiap lapis bisa dijalankan sendiri sesuai kebutuhan.
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="content-card p-4">
+                <div class="flex items-center gap-2 mb-2">
+                    <i class="fas fa-eye text-purple-400"></i>
+                    <h3 class="text-white font-semibold">1. Perception</h3>
+                </div>
+                <p class="text-slate-400 text-xs leading-relaxed">YOLOv8 (Ultralytics) atau fallback ONNX via OpenCV DNN. Mendeteksi class <b>car</b> dan <b>motorcycle</b> dengan NMS + IoU tracking custom.</p>
+            </div>
+            <div class="content-card p-4">
+                <div class="flex items-center gap-2 mb-2">
+                    <i class="fas fa-wave-square text-sky-400"></i>
+                    <h3 class="text-white font-semibold">2. Forecasting</h3>
+                </div>
+                <p class="text-slate-400 text-xs leading-relaxed">Tiny Transformer encoder (PyTorch) dilatih per kamera dari 60 hari history. Fallback ke rata-rata DOW &times; Hour kalau data belum cukup.</p>
+            </div>
+            <div class="content-card p-4">
+                <div class="flex items-center gap-2 mb-2">
+                    <i class="fas fa-comments text-amber-400"></i>
+                    <h3 class="text-white font-semibold">3. Assistant</h3>
+                </div>
+                <p class="text-slate-400 text-xs leading-relaxed">LLM lokal (Ollama, mis. <span class="inline-code">mistral:7b</span>) bertindak sebagai <b>agent</b>: jawab pertanyaan dan eksekusi <span class="inline-code">ui_actions</span> di frontend.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Detection & Counting Flow ============================================== -->
+    <section id="detection-flow" class="mb-14">
+        <h2 class="prose-h2">Detection &amp; Counting Flow</h2>
+        <p class="prose-p">
+            Setiap kamera memiliki agen thread sendiri. Berikut alur satu iterasi proses:
+        </p>
+
+        <div class="diagram-card mb-5">
+            <div class="mermaid">
+flowchart TB
+    S([Start tick]) --> READ["Read 1 frame<br/>OpenCV or FFmpeg fallback"]
+    READ --> OK{"Frame OK?"}
+    OK -- no --> SIM["Simulated count<br/>traffic pattern by hour"]
+    OK -- yes --> INF["YOLOv8 inference<br/>car / motorcycle"]
+    INF --> NMS["NMS + confidence filter"]
+    NMS --> TRK["IoU Tracker<br/>match to existing tracks"]
+    TRK --> NEW{"New track?"}
+    NEW -- yes --> COUNT["Increment accumulator"]
+    NEW -- no --> UPD["Update last_seen"]
+    COUNT --> PERS["Insert batch<br/>traffic_history"]
+    UPD --> PERS
+    SIM --> PERS
+    PERS --> LAKE["Append raw detections<br/>data_lake CSV"]
+    LAKE --> SLEEP([Sleep PROCESS_INTERVAL])
+    SLEEP --> S
+
+    classDef startEnd fill:#0ea5e9,stroke:#0284c7,color:#fff
+    classDef ai fill:#7e22ce,stroke:#a855f7,color:#fff
+    classDef decision fill:#f59e0b,stroke:#d97706,color:#0b1220
+    classDef io fill:#059669,stroke:#10b981,color:#fff
+    class S,SLEEP startEnd
+    class INF,NMS,TRK,SIM ai
+    class OK,NEW decision
+    class READ,COUNT,UPD,PERS,LAKE io
+            </div>
+        </div>
+
+        <h3 class="prose-h3">Kenapa pakai IoU Tracker</h3>
+        <p class="prose-p">
+            Detektor objek stateless &mdash; di setiap frame, YOLO cuma mengembalikan kotak pembatas tanpa tahu kotak yang
+            sama sudah muncul di frame sebelumnya. Kalau kita hanya menjumlahkan hasil deteksi mentah, mobil yang
+            berhenti di lampu merah akan terhitung puluhan kali. Tracker mencocokkan deteksi baru dengan track lama
+            memakai rasio <i>Intersection over Union</i>. Hanya track baru yang menambah <b>accumulated_count</b>.
+        </p>
+
+        <div class="callout tip">
+            <b>Threshold tuning.</b> Default <span class="inline-code">track_iou_threshold = 0.30</span> dan
+            <span class="inline-code">track_ttl_s = max(3s, PROCESS_INTERVAL &times; 4)</span>. Naikkan IoU untuk
+            menghindari <i>false merge</i> di persimpangan ramai; turunkan TTL supaya track lama cepat expire saat lalu lintas cepat.
+        </div>
+    </section>
+
+    <!-- Prediction Engine ======================================================= -->
+    <section id="prediction-engine" class="mb-14">
+        <h2 class="prose-h2">Prediction Engine</h2>
+        <p class="prose-p">
+            Prediksi volume kendaraan memakai strategi <b>hybrid</b>: coba Transformer dulu, kalau data tidak
+            cukup atau PyTorch tidak tersedia, fallback ke rata-rata DOW &times; Hour. Keduanya menjawab
+            pertanyaan yang sama: <i>&ldquo;berapa volume kendaraan di kamera X pada jam Y hari Z?&rdquo;</i>
+        </p>
+
+        <div class="diagram-card mb-5">
+            <div class="mermaid">
+flowchart LR
+    U([User picks target time]) --> API["POST /api/predict_traffic"]
+    API --> CHK{"Transformer ready<br/>for this camera?"}
+
+    subgraph PRIMARY["Primary - Tiny Transformer"]
+        T1["Build 48h context<br/>sliding window"]
+        T2["Encode value + hour + dow"]
+        T3["Self-attention layers"]
+        T4["Linear head<br/>predicted value"]
+        T1 --> T2 --> T3 --> T4
+    end
+
+    subgraph FALLBACK["Fallback - DOW x Hour Average"]
+        F1["SUM new_count<br/>GROUP BY date"]
+        F2["AVG hourly totals<br/>WHERE dow and hour"]
+        F1 --> F2
+    end
+
+    CHK -- yes --> T1
+    CHK -- no --> TRAIN[/"Trigger background training"/]
+    TRAIN -.-> PRIMARY
+    CHK -- no --> F1
+
+    T4 --> CLASS{"Classify"}
+    F2 --> CLASS
+
+    CLASS -- "lt 500" --> L([LANCAR])
+    CLASS -- "500 - 1000" --> P([PADAT LANCAR])
+    CLASS -- "1000 - 2000" --> M([MACET])
+    CLASS -- "gt 2000" --> TT([MACET TOTAL])
+
+    classDef user fill:#0ea5e9,stroke:#0284c7,color:#fff
+    classDef ai fill:#7e22ce,stroke:#a855f7,color:#fff
+    classDef db fill:#059669,stroke:#10b981,color:#fff
+    classDef out1 fill:#22c55e,stroke:#16a34a,color:#fff
+    classDef out2 fill:#eab308,stroke:#ca8a04,color:#0b1220
+    classDef out3 fill:#f97316,stroke:#ea580c,color:#fff
+    classDef out4 fill:#ef4444,stroke:#dc2626,color:#fff
+
+    class U,API user
+    class T1,T2,T3,T4 ai
+    class F1,F2 db
+    class L out1
+    class P out2
+    class M out3
+    class TT out4
+            </div>
+        </div>
+
+        <h3 class="prose-h3">Primary: Tiny Transformer Forecaster</h3>
+        <p class="prose-p">
+            Implementasi ringkas di <span class="inline-code">app/database.py</span>. Satu model per kamera, disimpan di memori.
+        </p>
+        <div class="step-list mb-4">
+            <div class="step-item"><div class="bullet">1</div><p><b>Bangun seri per jam.</b> Query 60 hari terakhir, <i>bucket</i> ke hourly totals di timezone lokal.</p></div>
+            <div class="step-item"><div class="bullet">2</div><p><b>Normalisasi.</b> Hitung mean &amp; std, ubah tiap nilai ke z-score supaya pelatihan stabil.</p></div>
+            <div class="step-item"><div class="bullet">3</div><p><b>Encode fitur.</b> Setiap timestep di-embed memakai <i>hour_embedding (24)</i>, <i>dow_embedding (7)</i>, <i>pos_embedding</i>, lalu dijumlahkan dengan proyeksi linear nilai.</p></div>
+            <div class="step-item"><div class="bullet">4</div><p><b>Encoder self-attention.</b> 2 layer TransformerEncoder, d_model 32, 4 attention head, dropout 0.1.</p></div>
+            <div class="step-item"><div class="bullet">5</div><p><b>Head linear.</b> LayerNorm + Linear(32 &rarr; 1) mengembalikan prediksi z-score.</p></div>
+            <div class="step-item"><div class="bullet">6</div><p><b>Inference.</b> 48 jam history terakhir dikirim ke model, output di-denormalisasi kembali ke jumlah kendaraan.</p></div>
+        </div>
+
+        <div class="bg-[#0b1220] rounded-xl border border-slate-800 p-4 overflow-x-auto">
+            <code class="text-xs text-blue-300 font-mono block mb-2"># Arsitektur model (disederhanakan)</code>
+<pre class="text-xs text-slate-300 bg-transparent border-none p-0 m-0">class _TinyTransformerForecaster(nn.Module):
+    def __init__(self, d_model=32, nhead=4, num_layers=2, dropout=0.1, max_len=256):
+        super().__init__()
+        self.value_proj = nn.Linear(1, d_model)
+        self.hour_emb   = nn.Embedding(24, d_model)
+        self.dow_emb    = nn.Embedding(7,  d_model)
+        self.pos_emb    = nn.Embedding(max_len, d_model)
+        enc = nn.TransformerEncoderLayer(d_model, nhead, dropout=dropout, batch_first=True)
+        self.encoder = nn.TransformerEncoder(enc, num_layers=num_layers)
+        self.head    = nn.Sequential(nn.LayerNorm(d_model), nn.Linear(d_model, 1))
+
+    def forward(self, x_val, x_hour, x_dow):
+        pos = torch.arange(x_val.size(1), device=x_val.device)
+        h = self.value_proj(x_val) + self.hour_emb(x_hour) + self.dow_emb(x_dow) + self.pos_emb(pos)
+        return self.head(self.encoder(h)[:, -1, :])</pre>
+        </div>
+
+        <div class="callout info">
+            <b>Kapan model dilatih?</b> Saat permintaan prediksi pertama kali, sistem mengecek apakah kamera sudah punya model.
+            Kalau belum dan data mencukupi (<span class="inline-code">&ge; max(context_len+24, 96)</span> bucket jam),
+            trainer dijalankan di thread background. Sampai training selesai, request dijawab lewat fallback di bawah.
+        </div>
+
+        <h3 class="prose-h3">Fallback: DOW &times; Hour Average</h3>
+        <p class="prose-p">
+            Strategi statistik sederhana yang tidak butuh PyTorch. Sistem menghitung rata-rata jumlah kendaraan
+            untuk pasangan <i>(day-of-week, hour)</i> yang sama di seluruh riwayat.
+        </p>
+
+        <div class="bg-[#0b1220] rounded-xl border border-slate-800 p-4 overflow-x-auto">
+            <code class="text-xs text-blue-300 font-mono block mb-2">-- Query PostgreSQL yang dipakai (app/database.py)</code>
+<pre class="text-xs text-slate-300 bg-transparent border-none p-0 m-0">WITH hourly_sums AS (
+    SELECT DATE(to_timestamp(timestamp) AT TIME ZONE 'Asia/Jakarta') AS date_str,
+           SUM(new_count) AS hourly_total
+    FROM traffic_history
+    WHERE camera_id = $1
+      AND EXTRACT(DOW FROM to_timestamp(timestamp) AT TIME ZONE 'Asia/Jakarta') = $2
+      AND EXTRACT(HOUR FROM to_timestamp(timestamp) AT TIME ZONE 'Asia/Jakarta') = $3
+    GROUP BY date_str
+)
+SELECT AVG(hourly_total) AS avg_hourly_traffic
+FROM hourly_sums;</pre>
+        </div>
+
+        <h3 class="prose-h3">Klasifikasi Kongesti</h3>
+        <p class="prose-p">Output numerik lalu dipetakan ke label kategorikal yang dipakai di UI dan perhitungan rute:</p>
+
+        <div class="overflow-x-auto rounded-lg border border-slate-800">
+            <table class="w-full text-sm text-left text-slate-400">
+                <thead class="text-xs text-slate-200 uppercase bg-slate-800/60">
+                    <tr>
+                        <th class="px-5 py-3">Volume / jam</th>
+                        <th class="px-5 py-3">Status</th>
+                        <th class="px-5 py-3">Color</th>
+                        <th class="px-5 py-3">Dipakai untuk</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="bg-slate-900/60 border-b border-slate-800"><td class="px-5 py-3">&lt; 500</td><td class="px-5 py-3 text-emerald-400 font-semibold">LANCAR</td><td class="px-5 py-3"><span class="inline-block w-3 h-3 rounded-full align-middle" style="background:#10b981"></span> Hijau</td><td class="px-5 py-3">Marker OK, rute cepat</td></tr>
+                    <tr class="bg-slate-900/40 border-b border-slate-800"><td class="px-5 py-3">500 – 1000</td><td class="px-5 py-3 text-yellow-300 font-semibold">PADAT LANCAR</td><td class="px-5 py-3"><span class="inline-block w-3 h-3 rounded-full align-middle" style="background:#eab308"></span> Kuning</td><td class="px-5 py-3">Mulai melambat</td></tr>
+                    <tr class="bg-slate-900/60 border-b border-slate-800"><td class="px-5 py-3">1000 – 2000</td><td class="px-5 py-3 text-orange-300 font-semibold">MACET</td><td class="px-5 py-3"><span class="inline-block w-3 h-3 rounded-full align-middle" style="background:#f59e0b"></span> Oranye</td><td class="px-5 py-3">Rute diberi penalty waktu</td></tr>
+                    <tr class="bg-slate-900/40"><td class="px-5 py-3">&gt; 2000</td><td class="px-5 py-3 text-rose-400 font-semibold">MACET TOTAL</td><td class="px-5 py-3"><span class="inline-block w-3 h-3 rounded-full align-middle" style="background:#ef4444"></span> Merah</td><td class="px-5 py-3">Disarankan ganti rute</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Route Congestion Logic ================================================= -->
+    <section id="route-congestion" class="mb-14">
+        <h2 class="prose-h2">Route Congestion Logic</h2>
+        <p class="prose-p">
+            Di halaman Dashboard, rute OSRM diwarnai per-segmen sesuai kondisi CCTV terdekat. Prosesnya murni di sisi client,
+            jadi update 10 detik sekali dari polling <span class="inline-code">/api/stats</span> langsung memperbarui warna
+            garis tanpa perlu memanggil OSRM lagi.
+        </p>
+
+        <div class="diagram-card">
+            <div class="mermaid">
+flowchart LR
+    OSRM["OSRM geometry<br/>list of coords"] --> SEG["Split per micro-segment"]
+    MARKERS["CCTV markers<br/>status / lat / lng"] --> ZONES["Build coverage zones<br/>radius 250m"]
+    SEG --> MATCH{"Mid-point<br/>inside any zone?"}
+    ZONES --> MATCH
+    MATCH -- yes --> SPD["speed = min(base, zone speed)"]
+    MATCH -- no  --> BASE["speed = base<br/>30 km/h car / 35 km/h bike"]
+    SPD --> BUCKET["Bucket into 4 classes"]
+    BASE --> BUCKET
+    BUCKET --> MERGE["Merge same-bucket chunks<br/>swallow slivers lt 180m"]
+    MERGE --> DRAW["Draw colored polyline<br/>+ hover tooltip"]
+
+    classDef src fill:#0ea5e9,stroke:#0284c7,color:#fff
+    classDef ai fill:#7e22ce,stroke:#a855f7,color:#fff
+    classDef out fill:#10b981,stroke:#059669,color:#fff
+    classDef dec fill:#f59e0b,stroke:#d97706,color:#0b1220
+    class OSRM,MARKERS src
+    class SEG,ZONES,SPD,BASE,BUCKET,MERGE ai
+    class MATCH dec
+    class DRAW out
+            </div>
+        </div>
+
+        <div class="callout tip mt-4">
+            <b>Realtime tanpa flicker.</b> Polling setiap 10 detik hanya memperbarui <span class="inline-code">markers[id].options.congestionStatus</span>.
+            Fungsi <span class="inline-code">refreshRouteOverlayFromMarkers()</span> membangun ulang analisis segmen
+            dari data yang sudah ada tanpa re-query OSRM.
+        </div>
+    </section>
+
+    <!-- Chatbot Flow ========================================================= -->
+    <section id="chatbot-flow" class="mb-14">
+        <h2 class="prose-h2">AI Assistant Flow</h2>
+        <p class="prose-p">
+            Chatbot bukan sekadar NLP: ia adalah <b>agen</b>. Selain menjawab, ia mengeluarkan
+            <span class="inline-code">ui_actions</span> yang langsung dieksekusi frontend &mdash; pindah halaman, pilih
+            kamera, ubah periode, atau munculkan popup prediksi.
+        </p>
+
+        <div class="diagram-card">
+            <div class="mermaid">
+flowchart TB
+    U([User message]) --> API["POST /api/chat"]
+    API --> MEM[("chat_profile<br/>chat_messages")]
+    API --> PARSE["Intent parser<br/>rule-based + NER"]
+    PARSE --> NEED{"Need traffic facts?"}
+
+    NEED -- yes --> DATA["Load grounded data<br/>stats / history / config"]
+    NEED -- no --> LLM{"Ollama reachable?"}
+    DATA --> COMPOSE
+    LLM -- yes --> OLLAMA["Ollama generate<br/>mistral / qwen"]
+    LLM -- no --> SAFE["Template fallback"]
+    OLLAMA --> COMPOSE["Compose reply<br/>+ ui_actions"]
+    SAFE --> COMPOSE
+
+    COMPOSE --> VAL["Whitelist validate<br/>only approved actions"]
+    VAL --> RESP["JSON response"]
+    RESP --> FE["Frontend render"]
+    FE --> NAV{"Navigate needed?"}
+    NAV -- yes --> SS[("sessionStorage<br/>queue actions")]
+    NAV -- no --> APPLY["Apply actions now"]
+    SS --> APPLY
+
+    classDef user fill:#0ea5e9,stroke:#0284c7,color:#fff
+    classDef ai fill:#f97316,stroke:#ea580c,color:#fff
+    classDef db fill:#059669,stroke:#10b981,color:#fff
+    classDef dec fill:#f59e0b,stroke:#d97706,color:#0b1220
+    class U,API user
+    class PARSE,OLLAMA,SAFE,COMPOSE,VAL,APPLY,FE ai
+    class MEM,DATA,SS db
+    class NEED,LLM,NAV dec
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5">
+            <div class="content-card p-4">
+                <h3 class="font-semibold text-white text-sm mb-2">Aksi yang didukung</h3>
+                <div class="flex flex-wrap gap-2 text-xs font-mono">
+                    <span class="inline-code">navigate</span>
+                    <span class="inline-code">select_camera</span>
+                    <span class="inline-code">set_period</span>
+                    <span class="inline-code">dashboard_predict</span>
+                    <span class="inline-code">show_prediction_popup</span>
+                    <span class="inline-code">show_forecast_popup</span>
+                </div>
+            </div>
+            <div class="content-card p-4">
+                <h3 class="font-semibold text-white text-sm mb-2">Prinsip keamanan</h3>
+                <ul class="list-disc list-inside text-slate-400 text-xs space-y-1">
+                    <li>Whitelist ketat; action yang tidak dikenal di-drop.</li>
+                    <li>Grounded mode: angka traffic selalu dari DB, bukan halusinasi LLM.</li>
+                    <li>Session memory di PostgreSQL, bukan di memori proses.</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Big Data ================================================================ -->
+    <section id="big-data" class="mb-14">
+        <h2 class="prose-h2">Big Data: The 4 Vs</h2>
+        <p class="prose-p">Bagaimana sistem memetakan prinsip Big Data ke implementasi konkret.</p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="content-card p-4">
+                <div class="flex items-center gap-2 mb-1">
+                    <i class="fas fa-database text-sky-400"></i>
+                    <h3 class="font-bold text-white">Volume</h3>
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed">455K+ row di PostgreSQL; partisi CSV di Data Lake tumbuh per hari per kamera.</p>
+            </div>
+            <div class="content-card p-4">
+                <div class="flex items-center gap-2 mb-1">
+                    <i class="fas fa-bolt text-yellow-400"></i>
+                    <h3 class="font-bold text-white">Velocity</h3>
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed">37 stream paralel, frame &rarr; DB dalam &lt; 500 ms, UI polling 10 detik.</p>
+            </div>
+            <div class="content-card p-4">
+                <div class="flex items-center gap-2 mb-1">
+                    <i class="fas fa-layer-group text-purple-400"></i>
+                    <h3 class="font-bold text-white">Variety</h3>
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed">Input RTSP &amp; HLS dari berbagai vendor CCTV; output JSON, CSV, dan Leaflet layers.</p>
+            </div>
+            <div class="content-card p-4">
+                <div class="flex items-center gap-2 mb-1">
+                    <i class="fas fa-gem text-emerald-400"></i>
+                    <h3 class="font-bold text-white">Value</h3>
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed">Prediksi kongesti, rekomendasi rute, dan laporan otomatis untuk pengambil keputusan.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Data Lake =============================================================== -->
+    <section id="data-lake" class="mb-14">
+        <h2 class="prose-h2">Data Lake Layout</h2>
+        <p class="prose-p">
+            Setiap deteksi YOLO yang valid ditulis mentah ke CSV partisi harian, agar mudah di-replay
+            untuk training ulang atau audit.
+        </p>
+<pre class="text-xs text-slate-300">data_lake/
+└── 2026/
+    └── 05/
+        └── 12/
+            ├── traffic_log_cam_abc123.csv
+            ├── traffic_log_cam_def456.csv
+            └── traffic_log_cam_...
+            # columns: timestamp, source_id, source_name, class_id, confidence, bbox</pre>
+        <div class="callout info">
+            <b>Kenapa partisi tanggal?</b> Memudahkan arsip/cold-storage dan bikin query
+            (mis. "ambil semua deteksi dari 1-7 Mei") cukup glob directory, tanpa full-table scan.
+        </div>
+    </section>
+
+    <!-- Data Models ============================================================ -->
+    <section id="data-models" class="mb-14">
+        <h2 class="prose-h2">Data Models</h2>
+
+        <h3 class="prose-h3">Table: <span class="inline-code">traffic_history</span> <span class="text-xs text-emerald-400 font-normal">(PostgreSQL)</span></h3>
+        <div class="bg-[#0b1220] rounded-lg border border-slate-800 overflow-hidden text-xs mb-4">
+            <table class="w-full text-left text-slate-400">
+                <thead class="bg-slate-800/60 text-slate-200">
+                    <tr>
+                        <th class="px-3 py-2">Column</th>
+                        <th class="px-3 py-2">Type</th>
+                        <th class="px-3 py-2">Description</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800">
+                    <tr><td class="px-3 py-2 font-mono text-sky-300">id</td><td class="px-3 py-2">BIGSERIAL</td><td class="px-3 py-2">Primary key auto-increment</td></tr>
+                    <tr><td class="px-3 py-2 font-mono text-sky-300">camera_id</td><td class="px-3 py-2">TEXT</td><td class="px-3 py-2">Foreign key ke konfigurasi CCTV</td></tr>
+                    <tr><td class="px-3 py-2 font-mono text-sky-300">timestamp</td><td class="px-3 py-2">DOUBLE PRECISION</td><td class="px-3 py-2">Unix epoch saat snapshot</td></tr>
+                    <tr><td class="px-3 py-2 font-mono text-sky-300">total_count</td><td class="px-3 py-2">INTEGER</td><td class="px-3 py-2">Density total di frame saat ini</td></tr>
+                    <tr><td class="px-3 py-2 font-mono text-sky-300">car_count / motorcycle_count</td><td class="px-3 py-2">INTEGER</td><td class="px-3 py-2">Density per kelas</td></tr>
+                    <tr><td class="px-3 py-2 font-mono text-sky-300">new_count</td><td class="px-3 py-2">INTEGER</td><td class="px-3 py-2">Track baru di interval ini (dipakai forecasting)</td></tr>
+                    <tr><td class="px-3 py-2 font-mono text-sky-300">new_cars / new_motors</td><td class="px-3 py-2">INTEGER</td><td class="px-3 py-2">Track baru per kelas</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h3 class="prose-h3">File: <span class="inline-code">data/cctv_config.json</span></h3>
+<pre class="text-xs text-slate-300">[
+  {
+    "id":     "cam_abc123",
+    "name":   "Simpang Dago",
+    "url":    "rtsp://...",
+    "lat":    -6.8922,
+    "lng":    107.6131,
+    "active": true
+  }
+]</pre>
+
+        <h3 class="prose-h3">Snapshot: <span class="inline-code">data/traffic_stats.json</span></h3>
+<pre class="text-xs text-slate-300">{
+  "sources": {
+    "cam_abc123": {
+      "name": "Simpang Dago",
+      "current_count": 32,
+      "accumulated_count": 154321,
+      "current_class_counts": { "0": 18, "1": 14 },
+      "accumulated_class_counts": { "0": 98234, "1": 56087 },
+      "status": "online",
+      "last_update": 1747036800.12
+    }
+  }
+}</pre>
+    </section>
+
+    <!-- API Reference ========================================================= -->
+    <section id="api-reference" class="mb-14">
+        <h2 class="prose-h2">API Reference</h2>
+        <p class="prose-p">REST API yang dipakai dashboard dan integrasi pihak ketiga.</p>
+
+        <div class="mb-6">
+            <div class="flex items-center gap-3 mb-2">
+                <span class="badge badge-get">GET</span>
+                <code class="text-lg text-white">/api/stats</code>
+            </div>
+            <p class="text-slate-400 text-sm mb-3">Snapshot live semua kamera plus total 30 hari per kamera.</p>
+<pre class="text-xs"><code class="language-json">{
+  "status": "success",
+  "active_source_id": "cam_abc123",
+  "sources": {
+    "cam_abc123": {
+      "name": "Simpang Dago",
+      "current_count": 32,
+      "accumulated_count": 154321,
+      "status": "online"
+    }
+  },
+  "by_camera_30d": {
+    "cam_abc123": {
+      "accumulated_count": 82300,
+      "cars": 55312,
+      "motorcycles": 26988
+    }
+  }
+}</code></pre>
+        </div>
+
+        <div class="mb-6">
+            <div class="flex items-center gap-3 mb-2">
+                <span class="badge badge-get">GET</span>
+                <code class="text-lg text-white">/api/history</code>
+            </div>
+            <p class="text-slate-400 text-sm mb-3">
+                Query dengan <span class="inline-code">period</span>
+                (<span class="inline-code">30m</span>, <span class="inline-code">1h</span>,
+                <span class="inline-code">6h</span>, <span class="inline-code">24h</span>,
+                <span class="inline-code">7d</span>, <span class="inline-code">30d</span>,
+                <span class="inline-code">custom</span>) dan opsional <span class="inline-code">camera_id</span>.
+                Response sudah di-bucket per interval untuk langsung dipakai Chart.js.
+            </p>
+        </div>
+
+        <div class="mb-6">
+            <div class="flex items-center gap-3 mb-2">
+                <span class="badge badge-post">POST</span>
+                <code class="text-lg text-white">/api/predict_traffic</code>
+            </div>
+            <p class="text-slate-400 text-sm mb-3">Prediksi volume kendaraan per kamera pada target waktu tertentu.</p>
+<pre class="text-xs"><code class="language-json">// Request
+{
+  "camera_id":    "cam_abc123",
+  "target_time":  "2026-05-13T08:00"   // ISO local
+}
+
+// Response
+{
+  "status": "success",
+  "prediction": 1260,
+  "classification": "MACET",
+  "model": "transformer",    // atau "dow_hour_average"
+  "samples_used": 1344
+}</code></pre>
+        </div>
+
+        <div class="mb-6">
+            <div class="flex items-center gap-3 mb-2">
+                <span class="badge badge-get">GET</span>
+                <code class="text-lg text-white">/api/export_csv</code>
+            </div>
+            <p class="text-slate-400 text-sm mb-3">Download history sebagai CSV. Parameter sama dengan <span class="inline-code">/api/history</span>.</p>
+        </div>
+
+        <div class="mb-6">
+            <div class="flex items-center gap-3 mb-2">
+                <span class="badge badge-post">POST</span>
+                <code class="text-lg text-white">/api/edit_camera</code>
+                <span class="badge badge-auth"><i class="fas fa-lock mr-1"></i>Admin</span>
+            </div>
+            <p class="text-slate-400 text-sm mb-3">Update metadata kamera (nama, URL, koordinat). Butuh autentikasi admin.</p>
+<pre class="text-xs"><code class="language-json">{
+  "username": "admin",
+  "password": "...",
+  "id":  "cam_abc123",
+  "lat": -6.89220,
+  "lng": 107.61310
+}</code></pre>
+        </div>
+
+        <div class="mb-6">
+            <div class="flex items-center gap-3 mb-2">
+                <span class="badge badge-post">POST</span>
+                <code class="text-lg text-white">/api/chat</code>
+            </div>
+            <p class="text-slate-400 text-sm mb-3">Endpoint AI Assistant. Mengembalikan teks balasan + daftar <span class="inline-code">ui_actions</span>.</p>
+        </div>
+    </section>
+
+    <!-- Configuration =========================================================== -->
+    <section id="config" class="mb-14">
+        <h2 class="prose-h2">Configuration</h2>
+        <p class="prose-p">Variabel environment utama yang memengaruhi perilaku sistem.</p>
+
+        <h3 class="prose-h3 text-emerald-400">Database (PostgreSQL)</h3>
+        <div class="overflow-x-auto rounded-lg border border-slate-800 mb-6">
+            <table class="w-full text-sm text-left text-slate-400">
+                <thead class="text-xs text-slate-200 uppercase bg-slate-800/60">
+                    <tr>
+                        <th class="px-4 py-3">Variable</th>
+                        <th class="px-4 py-3">Default</th>
+                        <th class="px-4 py-3">Keterangan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="bg-slate-900/60 border-b border-slate-800">
+                        <td class="px-4 py-3 font-mono text-sky-300">DB_HOST</td>
+                        <td class="px-4 py-3 font-mono">localhost</td>
+                        <td class="px-4 py-3">Hostname PostgreSQL server.</td>
+                    </tr>
+                    <tr class="bg-slate-900/40 border-b border-slate-800">
+                        <td class="px-4 py-3 font-mono text-sky-300">DB_PORT</td>
+                        <td class="px-4 py-3 font-mono">5432</td>
+                        <td class="px-4 py-3">Port PostgreSQL.</td>
+                    </tr>
+                    <tr class="bg-slate-900/60 border-b border-slate-800">
+                        <td class="px-4 py-3 font-mono text-sky-300">DB_NAME</td>
+                        <td class="px-4 py-3 font-mono">smarttraffic</td>
+                        <td class="px-4 py-3">Nama database.</td>
+                    </tr>
+                    <tr class="bg-slate-900/40 border-b border-slate-800">
+                        <td class="px-4 py-3 font-mono text-sky-300">DB_USER</td>
+                        <td class="px-4 py-3 font-mono">postgres</td>
+                        <td class="px-4 py-3">Username PostgreSQL.</td>
+                    </tr>
+                    <tr class="bg-slate-900/60 border-b border-slate-800">
+                        <td class="px-4 py-3 font-mono text-sky-300">DB_PASSWORD</td>
+                        <td class="px-4 py-3 font-mono">-</td>
+                        <td class="px-4 py-3">Password PostgreSQL (wajib diset).</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h3 class="prose-h3">AI &amp; System</h3>
+        <div class="overflow-x-auto rounded-lg border border-slate-800">
+            <table class="w-full text-sm text-left text-slate-400">
+                <thead class="text-xs text-slate-200 uppercase bg-slate-800/60">
+                    <tr>
+                        <th class="px-4 py-3">Variable</th>
+                        <th class="px-4 py-3">Default</th>
+                        <th class="px-4 py-3">Keterangan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="bg-slate-900/60 border-b border-slate-800">
+                        <td class="px-4 py-3 font-mono text-sky-300">OLLAMA_URL</td>
+                        <td class="px-4 py-3 font-mono">http://localhost:11434</td>
+                        <td class="px-4 py-3">Base URL Ollama server untuk chatbot.</td>
+                    </tr>
+                    <tr class="bg-slate-900/40 border-b border-slate-800">
+                        <td class="px-4 py-3 font-mono text-sky-300">OLLAMA_MODEL</td>
+                        <td class="px-4 py-3 font-mono">mistral:7b</td>
+                        <td class="px-4 py-3">Model default. Kalau kosong, sistem auto-pick dari <span class="inline-code">/api/tags</span>.</td>
+                    </tr>
+                    <tr class="bg-slate-900/60 border-b border-slate-800">
+                        <td class="px-4 py-3 font-mono text-sky-300">CHAT_GROUNDED_MODE</td>
+                        <td class="px-4 py-3 font-mono">1</td>
+                        <td class="px-4 py-3">1 = angka traffic wajib dari DB, LLM hanya untuk narasi.</td>
+                    </tr>
+                    <tr class="bg-slate-900/40 border-b border-slate-800">
+                        <td class="px-4 py-3 font-mono text-sky-300">CHAT_PLANNER</td>
+                        <td class="px-4 py-3 font-mono">1</td>
+                        <td class="px-4 py-3">Aktifkan planner yang mengekstrak <span class="inline-code">ui_actions</span>.</td>
+                    </tr>
+                    <tr class="bg-slate-900/60">
+                        <td class="px-4 py-3 font-mono text-sky-300">PROCESS_INTERVAL</td>
+                        <td class="px-4 py-3 font-mono">2.0</td>
+                        <td class="px-4 py-3">Detik antar iterasi agent (tuning kecepatan vs CPU).</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Quick Start ========================================================= -->
+    <section id="quickstart" class="mb-14">
+        <h2 class="prose-h2">Quick Start</h2>
+<pre class="text-xs text-slate-300"># 1. Install deps
+pip install -r requirements.txt
+
+# 2. Setup PostgreSQL database
+#    Buat database "smarttraffic" di PostgreSQL server kamu.
+#    Tabel akan otomatis dibuat saat server pertama kali start.
+#    Set environment variables jika beda dari default:
+#    set DB_HOST=localhost
+#    set DB_PORT=5432
+#    set DB_NAME=smarttraffic
+#    set DB_USER=postgres
+#    set DB_PASSWORD=your_password
+
+# 3. (Opsional) aktifkan LLM lokal
+ollama pull mistral:7b
+
+# 4. Jalankan server
+python run.py
+# &rarr; http://localhost:5000
+
+# 5. Buka halaman
+#    /           Monitor live
+#    /dashboard  Peta + routing berwarna
+#    /analysis   Tren &amp; analitik
+#    /documentation   halaman ini</pre>
+    </section>
+
+    <!-- Key Features ============================================================ -->
+    <section id="key-features" class="mb-14">
+        <h2 class="prose-h2">Key Features</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="content-card p-4">
+                <div class="flex items-center gap-2 mb-2">
+                    <i class="fas fa-brain text-purple-400"></i>
+                    <h3 class="font-semibold text-white">Deteksi per kelas</h3>
+                </div>
+                <p class="text-slate-400 text-xs">Mobil dan motor dipisah sejak level inferensi, berguna untuk analisis komposisi kendaraan.</p>
+            </div>
+            <div class="content-card p-4">
+                <div class="flex items-center gap-2 mb-2">
+                    <i class="fas fa-map-location-dot text-sky-400"></i>
+                    <h3 class="font-semibold text-white">Routing gradien</h3>
+                </div>
+                <p class="text-slate-400 text-xs">Rute OSRM diwarnai hijau/oranye/merah per bagian sesuai kepadatan CCTV terdekat, hover menampilkan ETA per segmen.</p>
+            </div>
+            <div class="content-card p-4">
+                <div class="flex items-center gap-2 mb-2">
+                    <i class="fas fa-clock-rotate-left text-amber-400"></i>
+                    <h3 class="font-semibold text-white">Backfill cerdas</h3>
+                </div>
+                <p class="text-slate-400 text-xs">Mengisi celah history saat agent offline supaya grafik tetap kontinu.</p>
+            </div>
+            <div class="content-card p-4">
+                <div class="flex items-center gap-2 mb-2">
+                    <i class="fas fa-robot text-rose-400"></i>
+                    <h3 class="font-semibold text-white">AI Assistant</h3>
+                </div>
+                <p class="text-slate-400 text-xs">Tanya statistik, prediksi, atau minta navigasi ke halaman tertentu &mdash; assistant menggerakkan UI langsung.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Transformer Deep Dive ================================================== -->
+    <section id="transformer-detail" class="mb-14">
+        <h2 class="prose-h2">Transformer Forecaster: Detail Implementasi</h2>
+        <p class="prose-p">
+            Bagian ini menjelaskan secara teknis bagaimana model Transformer dilatih dan digunakan
+            untuk memprediksi volume kendaraan 1–48 jam ke depan per kamera CCTV.
+        </p>
+
+        <h3 class="prose-h3">Arsitektur Model</h3>
+        <div class="diagram-card mb-5">
+            <div class="mermaid">
+flowchart LR
+    subgraph INPUT["Input: 48 jam terakhir"]
+        V["value<br/>volume/jam<br/>z-score"]
+        H["hour<br/>0-23"]
+        D["dow<br/>0-6"]
+    end
+
+    subgraph ENCODE["Encoding"]
+        VP["Linear(1, 32)"]
+        HE["Embedding(24, 32)"]
+        DE["Embedding(7, 32)"]
+        PE["Positional Emb(256, 32)"]
+        SUM["Sum all embeddings"]
+        V --> VP --> SUM
+        H --> HE --> SUM
+        D --> DE --> SUM
+        PE --> SUM
+    end
+
+    subgraph TRANSFORMER["Transformer Encoder"]
+        L1["EncoderLayer 1<br/>4 heads, d=32"]
+        L2["EncoderLayer 2<br/>4 heads, d=32"]
+        SUM --> L1 --> L2
+    end
+
+    subgraph HEAD["Output Head"]
+        LN["LayerNorm(32)"]
+        LIN["Linear(32, 1)"]
+        OUT(["Predicted volume"])
+        L2 -->|"last token"| LN --> LIN --> OUT
+    end
+
+    classDef inp fill:#0ea5e9,stroke:#0284c7,color:#fff
+    classDef enc fill:#7e22ce,stroke:#a855f7,color:#fff
+    classDef tf fill:#f59e0b,stroke:#d97706,color:#0b1220
+    classDef out fill:#10b981,stroke:#059669,color:#fff
+    class V,H,D inp
+    class VP,HE,DE,PE,SUM enc
+    class L1,L2 tf
+    class LN,LIN,OUT out
+            </div>
+        </div>
+
+        <h3 class="prose-h3">Spesifikasi</h3>
+        <div class="overflow-x-auto rounded-lg border border-slate-800 mb-6">
+            <table class="w-full text-sm text-left text-slate-400">
+                <thead class="text-xs text-slate-200 uppercase bg-slate-800/60">
+                    <tr><th class="px-4 py-3">Parameter</th><th class="px-4 py-3">Nilai</th><th class="px-4 py-3">Keterangan</th></tr>
+                </thead>
+                <tbody>
+                    <tr class="bg-slate-900/60 border-b border-slate-800"><td class="px-4 py-3 font-mono">d_model</td><td class="px-4 py-3">32</td><td class="px-4 py-3">Dimensi representasi internal</td></tr>
+                    <tr class="bg-slate-900/40 border-b border-slate-800"><td class="px-4 py-3 font-mono">nhead</td><td class="px-4 py-3">4</td><td class="px-4 py-3">Jumlah attention head</td></tr>
+                    <tr class="bg-slate-900/60 border-b border-slate-800"><td class="px-4 py-3 font-mono">num_layers</td><td class="px-4 py-3">2</td><td class="px-4 py-3">Jumlah encoder layer</td></tr>
+                    <tr class="bg-slate-900/40 border-b border-slate-800"><td class="px-4 py-3 font-mono">context_len</td><td class="px-4 py-3">48</td><td class="px-4 py-3">Window input (48 jam = 2 hari)</td></tr>
+                    <tr class="bg-slate-900/60 border-b border-slate-800"><td class="px-4 py-3 font-mono">dropout</td><td class="px-4 py-3">0.1</td><td class="px-4 py-3">Regularisasi</td></tr>
+                    <tr class="bg-slate-900/40 border-b border-slate-800"><td class="px-4 py-3 font-mono">optimizer</td><td class="px-4 py-3">AdamW</td><td class="px-4 py-3">lr = 3e-3</td></tr>
+                    <tr class="bg-slate-900/60 border-b border-slate-800"><td class="px-4 py-3 font-mono">epochs</td><td class="px-4 py-3">6</td><td class="px-4 py-3">Cukup untuk model kecil</td></tr>
+                    <tr class="bg-slate-900/40 border-b border-slate-800"><td class="px-4 py-3 font-mono">loss</td><td class="px-4 py-3">MSE</td><td class="px-4 py-3">Mean Squared Error</td></tr>
+                    <tr class="bg-slate-900/60"><td class="px-4 py-3 font-mono">max forecast</td><td class="px-4 py-3">48 step</td><td class="px-4 py-3">Autoregressive, max 48 jam ke depan</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h3 class="prose-h3">Alur Training (On-the-fly)</h3>
+        <div class="step-list mb-6">
+            <div class="step-item"><div class="bullet">1</div><p><b>Trigger.</b> Saat user pertama kali minta prediksi untuk kamera X dan belum ada model di memori.</p></div>
+            <div class="step-item"><div class="bullet">2</div><p><b>Query data.</b> Ambil 60 hari terakhir dari <span class="inline-code">traffic_history</span>, bucket ke hourly SUM(new_count).</p></div>
+            <div class="step-item"><div class="bullet">3</div><p><b>Cek minimum.</b> Butuh minimal 96 bucket jam (~4 hari kontinu). Kalau kurang → fallback DOW×Hour.</p></div>
+            <div class="step-item"><div class="bullet">4</div><p><b>Normalisasi.</b> Hitung mean &amp; std dari seluruh series, ubah ke z-score.</p></div>
+            <div class="step-item"><div class="bullet">5</div><p><b>Sliding window.</b> Buat pasangan (input 48 jam, target 1 jam berikutnya) untuk semua posisi.</p></div>
+            <div class="step-item"><div class="bullet">6</div><p><b>Training.</b> 6 epoch, batch 64, AdamW, gradient clipping 1.0. Selesai dalam 2–5 detik di CPU.</p></div>
+            <div class="step-item"><div class="bullet">7</div><p><b>Cache.</b> Model disimpan di RAM per kamera. Hilang saat restart, dilatih ulang otomatis.</p></div>
+        </div>
+
+        <h3 class="prose-h3">Alur Inference (Prediksi)</h3>
+        <div class="diagram-card mb-5">
+            <div class="mermaid">
+flowchart TB
+    REQ([User: prediksi jam 8 besok]) --> CALC["Hitung: target = 11 jam dari sekarang"]
+    CALC --> CACHE{"Model ada<br/>di cache?"}
+    CACHE -- ya --> WIN["Ambil 48 jam terakhir dari series"]
+    CACHE -- tidak --> TRAIN["Training background thread"]
+    TRAIN -.-> FALL["Fallback: DOW x Hour Average"]
+    WIN --> STEP["Autoregressive 11 step"]
+    STEP --> DENORM["Denormalisasi: pred x std + mean"]
+    DENORM --> RESULT(["Hasil: 523 kendaraan/jam"])
+    FALL --> RESULT
+
+    classDef user fill:#0ea5e9,stroke:#0284c7,color:#fff
+    classDef ai fill:#7e22ce,stroke:#a855f7,color:#fff
+    classDef dec fill:#f59e0b,stroke:#d97706,color:#0b1220
+    classDef out fill:#10b981,stroke:#059669,color:#fff
+    class REQ user
+    class CALC,WIN,STEP,DENORM,TRAIN,FALL ai
+    class CACHE dec
+    class RESULT out
+            </div>
+        </div>
+
+        <div class="callout info">
+            <b>Multi-step autoregressive:</b> Untuk prediksi N jam ke depan, model dijalankan N kali.
+            Setiap step, hasil prediksi dimasukkan ke window sebagai input step berikutnya.
+            Contoh: target 11 jam → model jalan 11 kali berurutan.
+        </div>
+
+        <h3 class="prose-h3">Kenapa Self-Attention Cocok untuk Traffic</h3>
+        <p class="prose-p">
+            Self-attention memungkinkan model melihat <b>semua 48 jam sekaligus</b> dan belajar korelasi jarak jauh:
+        </p>
+        <ul class="list-disc list-inside text-slate-400 text-sm space-y-2 mb-6 ml-4">
+            <li><b>Pola harian:</b> Jam 8 pagi hari ini mirip jam 8 pagi kemarin (jarak 24 jam)</li>
+            <li><b>Pola mingguan:</b> Senin jam 8 mirip Senin minggu lalu (ditangkap lewat DOW embedding)</li>
+            <li><b>Transisi:</b> Kalau jam 7 mulai ramai, jam 8 kemungkinan puncak (korelasi pendek)</li>
+            <li><b>Weekend vs weekday:</b> DOW embedding otomatis membedakan pola Sabtu/Minggu</li>
+        </ul>
+
+        <h3 class="prose-h3">Kode Inti (Ringkas)</h3>
+        <div class="bg-[#0b1220] rounded-xl border border-slate-800 p-4 overflow-x-auto mb-6">
+<pre class="text-xs text-slate-300 bg-transparent border-none p-0 m-0"># Training (app/database.py → _get_or_train_transformer)
+series = query_60_days_hourly(camera_id)     # [(ts, count), ...]
+mean, std = compute_stats(series)
+
+for epoch in range(6):
+    for batch in sliding_windows(series, context=48):
+        x_val = normalize(batch.values)       # shape: [B, 48, 1]
+        x_hour = batch.hours                  # shape: [B, 48]
+        x_dow = batch.dows                    # shape: [B, 48]
+        y_true = normalize(batch.target)      # shape: [B, 1]
+
+        y_pred = model(x_val, x_hour, x_dow)  # forward pass
+        loss = MSE(y_pred, y_true)
+        loss.backward()
+        optimizer.step()
+
+# Inference (app/database.py → _predict_with_transformer)
+window = last_48_hours()
+for step in range(hours_ahead):
+    pred = model(window)                      # 1 step
+    window = window[1:] + [pred]              # slide window
+return denormalize(pred)                      # → kendaraan/jam</pre>
+        </div>
+    </section>
+
+    <!-- PostgreSQL Integration Demo ============================================ -->
+    <section id="pg-demo" class="mb-14">
+        <h2 class="prose-h2">Demo: Edit Data via PostgreSQL</h2>
+        <p class="prose-p">
+            Sistem terhubung real-time ke PostgreSQL. Saat tombol <b>"DB: Paused"</b> aktif di dashboard,
+            kamu bisa edit data langsung di pgAdmin dan hasilnya langsung terlihat di dashboard.
+        </p>
+
+        <h3 class="prose-h3">Langkah Demo</h3>
+        <div class="step-list mb-6">
+            <div class="step-item"><div class="bullet">1</div><p><b>Pause.</b> Klik tombol "DB: Writing" di header dashboard → berubah jadi "DB: Paused" (merah).</p></div>
+            <div class="step-item"><div class="bullet">2</div><p><b>Edit di pgAdmin.</b> Jalankan query UPDATE di bawah.</p></div>
+            <div class="step-item"><div class="bullet">3</div><p><b>Lihat dashboard.</b> Tunggu 10 detik, angka di marker peta berubah sesuai edit.</p></div>
+            <div class="step-item"><div class="bullet">4</div><p><b>Resume.</b> Klik tombol lagi → "DB: Writing" (hijau). Data kembali dari kamera real-time.</p></div>
+        </div>
+
+        <h3 class="prose-h3">Query: Ubah Current Count (Live Marker)</h3>
+        <div class="bg-[#0b1220] rounded-xl border border-slate-800 p-4 overflow-x-auto mb-4">
+<pre class="text-xs text-slate-300 bg-transparent border-none p-0 m-0">-- Ubah current_count Simpang Braga jadi 300 (terlihat di marker peta)
+UPDATE live_status
+SET current_count = 300, current_cars = 150, current_motors = 150
+WHERE camera_name = 'Simpang Braga';
+
+-- Kembalikan ke 0 setelah demo
+UPDATE live_status
+SET current_count = 0, current_cars = 0, current_motors = 0
+WHERE camera_name = 'Simpang Braga';</pre>
+        </div>
+
+        <h3 class="prose-h3">Query: Ubah Total 30 Hari (Card Statistik)</h3>
+        <div class="bg-[#0b1220] rounded-xl border border-slate-800 p-4 overflow-x-auto mb-4">
+<pre class="text-xs text-slate-300 bg-transparent border-none p-0 m-0">-- Tambah 5000 ke total kendaraan di row terbaru (langsung terlihat di card 30 hari)
+UPDATE traffic_history
+SET new_cars = new_cars + 5000, new_motors = new_motors + 5000
+WHERE id = (SELECT id FROM traffic_history ORDER BY timestamp DESC LIMIT 1);
+
+-- Rollback setelah demo
+UPDATE traffic_history
+SET new_cars = new_cars - 5000, new_motors = new_motors - 5000
+WHERE id = (SELECT id FROM traffic_history ORDER BY timestamp DESC LIMIT 1);</pre>
+        </div>
+
+        <h3 class="prose-h3">Query: Lihat Hasil Prediksi</h3>
+        <div class="bg-[#0b1220] rounded-xl border border-slate-800 p-4 overflow-x-auto mb-4">
+<pre class="text-xs text-slate-300 bg-transparent border-none p-0 m-0">-- Prediksi volume untuk Simpang Braga, hari Rabu (dow=3), jam 8 pagi
+WITH hourly_sums AS (
+    SELECT
+        DATE(to_timestamp(timestamp) AT TIME ZONE 'Asia/Jakarta') AS tgl,
+        SUM(new_count) AS hourly_total
+    FROM traffic_history
+    WHERE camera_name = 'Simpang Braga'
+      AND EXTRACT(DOW FROM to_timestamp(timestamp) AT TIME ZONE 'Asia/Jakarta') = 3
+      AND EXTRACT(HOUR FROM to_timestamp(timestamp) AT TIME ZONE 'Asia/Jakarta') = 8
+    GROUP BY tgl
+)
+SELECT
+    AVG(hourly_total)::int AS prediksi_kendaraan_per_jam,
+    COUNT(*) AS jumlah_sample,
+    CASE
+        WHEN AVG(hourly_total) > 2000 THEN 'MACET TOTAL'
+        WHEN AVG(hourly_total) > 1000 THEN 'MACET'
+        WHEN AVG(hourly_total) > 500  THEN 'PADAT LANCAR'
+        ELSE 'LANCAR'
+    END AS status_prediksi
+FROM hourly_sums;</pre>
+        </div>
+
+        <h3 class="prose-h3">Query: Ranking Kamera Paling Macet</h3>
+        <div class="bg-[#0b1220] rounded-xl border border-slate-800 p-4 overflow-x-auto mb-4">
+<pre class="text-xs text-slate-300 bg-transparent border-none p-0 m-0">-- Top 10 kamera paling macet untuk hari Rabu jam 8
+WITH hourly_sums AS (
+    SELECT camera_name,
+           DATE(to_timestamp(timestamp) AT TIME ZONE 'Asia/Jakarta') AS tgl,
+           SUM(new_count) AS hourly_total
+    FROM traffic_history
+    WHERE EXTRACT(DOW FROM to_timestamp(timestamp) AT TIME ZONE 'Asia/Jakarta') = 3
+      AND EXTRACT(HOUR FROM to_timestamp(timestamp) AT TIME ZONE 'Asia/Jakarta') = 8
+    GROUP BY camera_name, tgl
+)
+SELECT camera_name,
+       AVG(hourly_total)::int AS prediksi,
+       CASE
+           WHEN AVG(hourly_total) > 2000 THEN 'MACET TOTAL'
+           WHEN AVG(hourly_total) > 1000 THEN 'MACET'
+           WHEN AVG(hourly_total) > 500  THEN 'PADAT LANCAR'
+           ELSE 'LANCAR'
+       END AS status
+FROM hourly_sums
+GROUP BY camera_name
+ORDER BY prediksi DESC
+LIMIT 10;</pre>
+        </div>
+
+        <h3 class="prose-h3">Query: Prediksi 24 Jam Penuh</h3>
+        <div class="bg-[#0b1220] rounded-xl border border-slate-800 p-4 overflow-x-auto mb-4">
+<pre class="text-xs text-slate-300 bg-transparent border-none p-0 m-0">-- Prediksi per jam untuk Simpang Braga di hari Rabu
+WITH hourly_sums AS (
+    SELECT EXTRACT(HOUR FROM to_timestamp(timestamp) AT TIME ZONE 'Asia/Jakarta')::int AS jam,
+           DATE(to_timestamp(timestamp) AT TIME ZONE 'Asia/Jakarta') AS tgl,
+           SUM(new_count) AS hourly_total
+    FROM traffic_history
+    WHERE camera_name = 'Simpang Braga'
+      AND EXTRACT(DOW FROM to_timestamp(timestamp) AT TIME ZONE 'Asia/Jakarta') = 3
+    GROUP BY jam, tgl
+)
+SELECT jam,
+       AVG(hourly_total)::int AS prediksi,
+       CASE
+           WHEN AVG(hourly_total) > 2000 THEN 'MACET TOTAL'
+           WHEN AVG(hourly_total) > 1000 THEN 'MACET'
+           WHEN AVG(hourly_total) > 500  THEN 'PADAT LANCAR'
+           ELSE 'LANCAR'
+       END AS status
+FROM hourly_sums
+GROUP BY jam
+ORDER BY jam;</pre>
+        </div>
+
+        <div class="callout tip">
+            <b>DOW Reference:</b> 0 = Minggu, 1 = Senin, 2 = Selasa, 3 = Rabu, 4 = Kamis, 5 = Jumat, 6 = Sabtu.
+            Ganti angka DOW dan HOUR sesuai target prediksi yang diinginkan.
+        </div>
+
+        <h3 class="prose-h3">Tabel yang Tersedia</h3>
+        <div class="overflow-x-auto rounded-lg border border-slate-800">
+            <table class="w-full text-sm text-left text-slate-400">
+                <thead class="text-xs text-slate-200 uppercase bg-slate-800/60">
+                    <tr><th class="px-4 py-3">Tabel</th><th class="px-4 py-3">Fungsi</th><th class="px-4 py-3">Kolom Penting</th></tr>
+                </thead>
+                <tbody>
+                    <tr class="bg-slate-900/60 border-b border-slate-800">
+                        <td class="px-4 py-3 font-mono text-sky-300">traffic_history</td>
+                        <td class="px-4 py-3">Data historis per interval per kamera</td>
+                        <td class="px-4 py-3 text-xs">camera_name, recorded_at, new_count, new_cars, new_motors</td>
+                    </tr>
+                    <tr class="bg-slate-900/40 border-b border-slate-800">
+                        <td class="px-4 py-3 font-mono text-sky-300">live_status</td>
+                        <td class="px-4 py-3">Current count per kamera (real-time marker)</td>
+                        <td class="px-4 py-3 text-xs">camera_name, current_count, current_cars, current_motors</td>
+                    </tr>
+                    <tr class="bg-slate-900/60">
+                        <td class="px-4 py-3 font-mono text-sky-300">chat_messages</td>
+                        <td class="px-4 py-3">Riwayat percakapan AI Assistant</td>
+                        <td class="px-4 py-3 text-xs">sent_at, role, content</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- FAQ ===================================================================== -->
+    <section id="faq" class="mb-14">
+        <h2 class="prose-h2">FAQ</h2>
+
+        <details class="content-card p-4 mb-3" open>
+            <summary class="cursor-pointer text-white font-semibold">Kenapa prediksi kadang jatuh ke DOW-Hour Average?</summary>
+            <p class="text-slate-400 text-sm mt-3">Transformer hanya dilatih kalau sudah ada minimal 96 bucket jam (~4 hari kontinu) dan PyTorch terpasang. Kalau salah satu syarat gagal, sistem otomatis pakai rata-rata DOW &times; Hour supaya tetap memberi jawaban.</p>
+        </details>
+
+        <details class="content-card p-4 mb-3">
+            <summary class="cursor-pointer text-white font-semibold">Bagaimana cara sistem menghindari double counting di lampu merah?</summary>
+            <p class="text-slate-400 text-sm mt-3">Setiap deteksi YOLO dicocokkan ke <i>track</i> yang sudah ada lewat rasio IoU. Kalau cocok, track itu di-refresh (bukan dihitung ulang). Hanya track baru yang menambah akumulator.</p>
+        </details>
+
+        <details class="content-card p-4 mb-3">
+            <summary class="cursor-pointer text-white font-semibold">Apakah sistem bisa jalan tanpa GPU?</summary>
+            <p class="text-slate-400 text-sm mt-3">Bisa. Fallback ke OpenCV DNN (ONNX) yang dioptimasi untuk CPU. Kecepatan turun tapi tetap real-time untuk ~10 stream.</p>
+        </details>
+
+        <details class="content-card p-4 mb-3">
+            <summary class="cursor-pointer text-white font-semibold">Kenapa pakai PostgreSQL, bukan SQLite?</summary>
+            <p class="text-slate-400 text-sm mt-3">PostgreSQL mendukung concurrent writes dari 37 camera agents tanpa file-locking. Juga lebih scalable untuk production deployment, mendukung connection pooling, dan punya built-in date/time functions yang kaya untuk query prediksi.</p>
+        </details>
+
+        <details class="content-card p-4 mb-3">
+            <summary class="cursor-pointer text-white font-semibold">Kalau kamera offline, data tetap ada?</summary>
+            <p class="text-slate-400 text-sm mt-3">Ya. Agent akan beralih ke simulasi pola lalu lintas berbasis jam. Status kamera ditandai <span class="inline-code">offline</span> agar dashboard tidak menipu.</p>
+        </details>
+    </section>
+
+</div>
+
+<footer class="fixed bottom-4 right-6 z-40 opacity-50 hover:opacity-100 transition-opacity">
+    <a href="https://avicenafahmi.com" target="_blank" class="text-xs font-mono text-slate-500 hover:text-sky-400 flex items-center gap-2">
+        <span>&copy; avicenafahmi.com</span>
+    </a>
+</footer>
+{% endblock %}
+{% block scripts %}
+    <script>
+        // Active nav highlight while scrolling
+        const sections = document.querySelectorAll('section[id]');
+        const docLinks = document.querySelectorAll('.doc-link');
+        const mainScroll = document.getElementById('main-scroll');
+
+        function updateActive() {
+            const scrollTop = mainScroll ? mainScroll.scrollTop : window.scrollY;
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (scrollTop >= sectionTop - 160) current = section.getAttribute('id');
+            });
+            docLinks.forEach(link => {
+                link.classList.remove('active');
+                if (current && link.getAttribute('href') === '#' + current) link.classList.add('active');
+            });
+        }
+        if (mainScroll) mainScroll.addEventListener('scroll', updateActive);
+        updateActive();
+
+        // Simple client-side search that expands/collapses sections
+        const docSearch = document.getElementById('doc-search');
+        if (docSearch) {
+            docSearch.addEventListener('input', (e) => {
+                const q = String(e.target.value || '').trim().toLowerCase();
+                sections.forEach(section => {
+                    if (!q) {
+                        section.style.display = '';
+                        return;
+                    }
+                    const matches = (section.textContent || '').toLowerCase().includes(q);
+                    section.style.display = matches ? '' : 'none';
+                });
+            });
+        }
+    </script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            fontFamily: 'Inter',
+            securityLevel: 'loose',
+            flowchart: { curve: 'basis', padding: 12, useMaxWidth: true, htmlLabels: true }
+        });
+    </script>
+{% endblock %}

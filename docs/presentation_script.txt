@@ -1,0 +1,60 @@
+# SKRIP NARASI PRESENTASI: SMART TRAFFIC AI & PREDICTIVE ANALYTICS
+
+---
+
+## [Slide 1: Pembukaan & Judul]
+"Selamat pagi/siang/sore semuanya.
+Pada kesempatan ini, saya akan mempresentasikan 'Smart Traffic AI', sebuah sistem pemantauan lalu lintas cerdas yang tidak hanya 'melihat' apa yang terjadi saat ini, tetapi juga mampu 'memprediksi' apa yang akan terjadi nanti.
+Fokus utama kita hari ini adalah membahas bagaimana sistem ini mengolah Big Data menjadi sebuah Keputusan (Decision Making)."
+
+---
+
+## [Slide 2: Masalah & Solusi]
+"Kita tahu bahwa kemacetan seringkali terjadi bukan karena kurangnya jalan, tapi kurangnya informasi.
+Sistem CCTV konvensional hanya merekam video. Jika macet, operator baru tahu setelah melihat layar. Itu reaktif.
+Solusi yang kami bangun ini berbeda. Kami menggunakan Computer Vision dan AI untuk mengubah video menjadi DATA. Kami menghitung jumlah kendaraan, membedakan motor dan mobil, dan menyimpan jutaan data historis untuk analisis."
+
+---
+
+## [Slide 3: Real-time Decision Making (Analisis Saat Ini)]
+"Pertama, mari lihat bagaimana sistem mengambil keputusan secara Real-time.
+Saat kamera melihat jalan, AI kami memberikan skor 'Visual Density' atau kepadatan visual dari 0 sampai 100.
+Berdasarkan skor ini, sistem secara otomatis memberi label status:
+- Jika skor rendah, statusnya 'LANCAR' (Hijau).
+- Jika mulai padat, menjadi 'PADAT LANCAR' (Kuning).
+- Dan jika kendaraan menumpuk, sistem memvonis 'MACET' (Merah).
+Ini membantu operator mengetahui kondisi lapangan detik ini juga tanpa harus menatap monitor terus-menerus."
+
+---
+
+## [Slide 4: Predictive Analytics (Melihat Masa Depan)]
+"Namun, fitur paling canggih dari sistem ini adalah 'Predictive Analytics'.
+Pernahkah Anda bertanya: 'Kira-kira Senin depan jam 8 pagi di jalan ini macet tidak ya?'
+Sistem kami bisa menjawabnya.
+Kami menggunakan algoritma 'Historical Pattern Replay'. Karena sistem ini menyimpan data selama 24 jam non-stop, kami memiliki 'Big Data Lake' yang berisi pola lalu lintas dari hari-hari sebelumnya."
+
+---
+
+## [Slide 5: Logika Prediksi (The Logic)]
+"Bagaimana cara kerjanya?
+Sistem tidak menebak asal-asalan. Logikanya berbasis data empiris:
+Misalnya, kita ingin tahu prediksi untuk 'Hari Senin jam 08:00'.
+Sistem akan menarik data dari database: 'Tampilkan semua data hari Senin jam 08:00 yang pernah tercatat dalam sejarah'.
+Lalu, sistem menghitung rata-rata volume kendaraannya.
+
+Hasil hitungan tersebut kemudian masuk ke logika threshold kami:
+- Di atas 2000 kendaraan/jam? Prediksi: MACET TOTAL.
+- Di atas 1000? Prediksi: MACET.
+- Di atas 500? Prediksi: PADAT LANCAR.
+- Di bawah itu? LANCAR.
+
+Jadi, keputusan ini murni berdasarkan perilaku lalu lintas historis di lokasi tersebut."
+
+---
+
+## [Slide 6: Kesimpulan & Value]
+"Sebagai penutup, Smart Traffic AI ini mentransformasi cara kita menangani lalu lintas.
+Dari yang tadinya hanya 'Memantau' (Monitoring), menjadi 'Memahami' (Insight), dan akhirnya membantu kita 'Memutuskan' (Decision).
+Dengan data ini, kita bisa melakukan rekayasa lalu lintas bahkan SEBELUM kemacetan itu benar-benar terjadi.
+
+Terima kasih."

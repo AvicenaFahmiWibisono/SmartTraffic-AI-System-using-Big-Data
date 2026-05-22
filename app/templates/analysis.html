@@ -1,0 +1,751 @@
+{% extends "base.html" %}
+{% block title %}SmartTraffic AI - Analytics{% endblock %}
+{% block header_kicker %}Analytics{% endblock %}
+{% block header_title %}Traffic Analytics{% endblock %}
+{% block head_extra %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+{% endblock %}
+{% block style_extra %}
+    <style>
+        .kpi-card { background: rgba(15, 23, 42, 0.55); border: 1px solid rgba(255,255,255,0.08); border-radius: 1rem; }
+        .input-surface { background: rgba(2, 6, 23, 0.55); border: 1px solid rgba(255,255,255,0.10); }
+        .input-surface:focus { outline: none; border-color: rgba(56,189,248,0.45); box-shadow: 0 0 0 3px rgba(56,189,248,0.12); }
+    </style>
+{% endblock %}
+{% block content %}
+    <div class="space-y-6 max-w-[1400px] mx-auto">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div class="glass-panel p-4">
+                <div class="text-xs text-slate-400 mb-2">Kamera</div>
+                <select id="camera-filter" class="w-full input-surface text-white rounded-xl px-3 py-2 text-xs transition-all">
+                    <option value="all">Semua CCTV</option>
+                </select>
+            </div>
+            <div class="glass-panel p-4">
+                <div class="text-xs text-slate-400 mb-2">Periode</div>
+                <select id="period-filter" class="w-full input-surface text-white rounded-xl px-3 py-2 text-xs transition-all">
+                    <option value="30m">Last 30m</option>
+                    <option value="1h" selected>Last 1h</option>
+                    <option value="6h">Last 6h</option>
+                    <option value="12h">Last 12h</option>
+                    <option value="24h">Today</option>
+                    <option value="7d">Last 7d</option>
+                    <option value="30d">Last 30d</option>
+                </select>
+            </div>
+            <div class="glass-panel p-4 flex items-center justify-between gap-3">
+                <div>
+                    <div class="text-xs text-slate-400">Status Data</div>
+                    <div class="text-xs text-slate-500 mt-1" id="analytics-status">Memuat...</div>
+                </div>
+                <button id="refresh-analytics" class="px-3 py-2 rounded-xl bg-slate-950/40 hover:bg-slate-950/65 border border-white/10 text-slate-200 text-xs transition-all">
+                    <i class="fas fa-rotate mr-1"></i> Refresh
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div class="kpi-card p-4">
+                <div class="text-[10px] text-slate-500 uppercase tracking-wider">Total Traffic (Periode)</div>
+                <div class="text-2xl font-bold text-white mt-2 tabular-nums" id="kpi-volume">-</div>
+            </div>
+            <div class="kpi-card p-4">
+                <div class="text-[10px] text-slate-500 uppercase tracking-wider">Cars (Periode)</div>
+                <div class="text-2xl font-bold text-emerald-300 mt-2 tabular-nums" id="kpi-cars">-</div>
+            </div>
+            <div class="kpi-card p-4">
+                <div class="text-[10px] text-slate-500 uppercase tracking-wider">Motors (Periode)</div>
+                <div class="text-2xl font-bold text-amber-300 mt-2 tabular-nums" id="kpi-motors">-</div>
+            </div>
+            <div class="kpi-card p-4">
+                <div class="text-[10px] text-slate-500 uppercase tracking-wider">Avg Density</div>
+                <div class="text-2xl font-bold text-sky-300 mt-2 tabular-nums" id="kpi-density">-</div>
+            </div>
+            <div class="kpi-card p-4">
+                <div class="text-[10px] text-slate-500 uppercase tracking-wider">Lifetime Total</div>
+                <div class="text-2xl font-bold text-white mt-2 tabular-nums" id="kpi-lifetime">-</div>
+            </div>
+            <div class="kpi-card p-4">
+                <div class="text-[10px] text-slate-500 uppercase tracking-wider">Online Cameras</div>
+                <div class="text-2xl font-bold text-white mt-2 tabular-nums" id="kpi-online">-</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div class="glass-panel p-4 lg:col-span-2">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="text-sm font-semibold text-white">Trend (Density)</div>
+                    <div class="text-xs text-slate-500" id="trend-subtitle">-</div>
+                </div>
+                <div class="relative w-full h-[320px]">
+                    <canvas id="trend-chart"></canvas>
+                </div>
+            </div>
+            <div class="glass-panel p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="text-sm font-semibold text-white">Komposisi</div>
+                    <div class="text-xs text-slate-500" id="pie-subtitle">-</div>
+                </div>
+                <div class="relative w-full h-[320px]">
+                    <canvas id="class-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-panel overflow-hidden">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-white/10 bg-slate-950/25">
+                <div class="text-sm font-semibold text-white">Top CCTV (Lifetime)</div>
+                <div class="text-xs text-slate-500" id="top-subtitle">-</div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead class="bg-slate-950/35 text-slate-400 text-xs">
+                        <tr>
+                            <th class="px-4 py-3 text-left">Camera</th>
+                            <th class="px-4 py-3 text-right">Lifetime</th>
+                            <th class="px-4 py-3 text-right">Live</th>
+                            <th class="px-4 py-3 text-right">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="top-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div id="prediction-popup" class="hidden fixed inset-0 z-[9999]">
+        <div id="prediction-popup-overlay" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+        <div class="absolute inset-0 flex items-center justify-center p-4">
+            <div class="w-full max-w-[860px] glass-panel overflow-hidden border border-white/10">
+                <div class="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-slate-950/35">
+                    <div>
+                        <div class="text-sm font-semibold text-white" id="prediction-popup-title">Detail Prediksi</div>
+                        <div class="text-xs text-slate-400 mt-0.5" id="prediction-popup-subtitle">-</div>
+                    </div>
+                    <button id="prediction-popup-close" class="px-3 py-2 rounded-xl bg-slate-950/40 hover:bg-slate-950/65 border border-white/10 text-slate-200 text-xs transition-all">
+                        <i class="fas fa-xmark mr-1"></i> Tutup
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+                    <div class="rounded-xl overflow-hidden border border-white/10 bg-slate-950/20">
+                        <div id="prediction-map" class="w-full h-[320px]"></div>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="text-xs text-slate-400">Ringkasan</div>
+                        <div id="prediction-popup-body" class="text-sm text-slate-100 whitespace-pre-wrap">-</div>
+                        <div class="text-xs text-slate-500">Tip: kamu bisa ganti Kamera/Periode di atas, grafik akan ikut berubah.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="forecast-popup" class="hidden fixed inset-0 z-[9999]">
+        <div id="forecast-popup-overlay" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+        <div class="absolute inset-0 flex items-center justify-center p-4">
+            <div class="w-full max-w-[980px] glass-panel overflow-hidden border border-white/10">
+                <div class="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-slate-950/35">
+                    <div>
+                        <div class="text-sm font-semibold text-white" id="forecast-popup-title">Forecast</div>
+                        <div class="text-xs text-slate-400 mt-0.5" id="forecast-popup-subtitle">-</div>
+                    </div>
+                    <button id="forecast-popup-close" class="px-3 py-2 rounded-xl bg-slate-950/40 hover:bg-slate-950/65 border border-white/10 text-slate-200 text-xs transition-all">
+                        <i class="fas fa-xmark mr-1"></i> Tutup
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+                    <div class="rounded-xl overflow-hidden border border-white/10 bg-slate-950/20">
+                        <div id="forecast-map" class="w-full h-[320px]"></div>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="text-xs text-slate-400">Ringkasan</div>
+                        <div id="forecast-popup-body" class="text-sm text-slate-100 whitespace-pre-wrap">-</div>
+                        <div class="text-xs text-slate-500">Tip: ini forecast berdasarkan pola historis per jam. Untuk lihat data historis, gunakan grafik di halaman ini.</div>
+                    </div>
+                </div>
+                <div class="border-t border-white/10 bg-slate-950/20">
+                    <div class="px-4 py-3 text-xs text-slate-400">Detail harian</div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <thead class="bg-slate-950/35 text-slate-400 text-xs">
+                                <tr>
+                                    <th class="px-4 py-3 text-left">Tanggal</th>
+                                    <th class="px-4 py-3 text-left">Status</th>
+                                    <th class="px-4 py-3 text-right">Avg / jam</th>
+                                    <th class="px-4 py-3 text-right">Puncak</th>
+                                </tr>
+                            </thead>
+                            <tbody id="forecast-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block scripts %}
+    <script>
+        let trendChart = null;
+        let classChart = null;
+
+        function setStatusText(text) {
+            const el = document.getElementById('analytics-status');
+            if (el) el.innerText = text || '';
+        }
+
+        function safeNum(v) {
+            const n = Number(v);
+            return Number.isFinite(n) ? n : 0;
+        }
+
+        let predictionMap = null;
+        let predictionMarker = null;
+        let predictionNearbyLayer = null;
+        let forecastMap = null;
+        let forecastMarker = null;
+        let forecastNearbyLayer = null;
+
+        function fmtInt(n) {
+            const v = Math.round(safeNum(n));
+            return String(v).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        }
+
+        function openPredictionPopup(payload) {
+            const root = document.getElementById('prediction-popup');
+            if (!root) return;
+            root.classList.remove('hidden');
+
+            const title = document.getElementById('prediction-popup-title');
+            const subtitle = document.getElementById('prediction-popup-subtitle');
+            const body = document.getElementById('prediction-popup-body');
+
+            const camName = String(payload.camera_name || payload.camera_id || '-');
+            const target = String(payload.target_time_local || '').trim();
+            const tz = String(payload.timezone_name || '').trim();
+            const mins = payload.minutes_ahead != null ? Number(payload.minutes_ahead) : null;
+            const vph = payload.vehicles_per_hour != null ? Number(payload.vehicles_per_hour) : null;
+            const status = String(payload.status || '-');
+            const thr = (payload.thresholds && typeof payload.thresholds === 'object') ? payload.thresholds : {};
+            const nearby = Array.isArray(payload.nearby_congested) ? payload.nearby_congested : [];
+            const recent1h = (payload.recent_1h && typeof payload.recent_1h === 'object') ? payload.recent_1h : null;
+
+            if (title) title.innerText = `Prediksi: ${camName}`;
+            if (subtitle) subtitle.innerText = target ? `Target ${target} ${tz}` : (tz ? tz : '-');
+
+            const labelExplain = (s) => {
+                const k = String(s || '').toUpperCase();
+                if (k === 'LANCAR') return 'Lancar: arus kendaraan masih nyaman.';
+                if (k === 'PADAT LANCAR') return 'Padat lancar: ramai, tapi masih bergerak.';
+                if (k === 'MACET') return 'Macet: laju cenderung tersendat.';
+                if (k === 'MACET TOTAL') return 'Macet total: kemungkinan antrean panjang / sangat padat.';
+                return '';
+            };
+
+            const lines = [];
+            lines.push('Ringkasnya:');
+            if (status && status !== '-') lines.push(`- Perkiraan kondisi: ${status}. ${labelExplain(status)}`.trim());
+            if (vph != null && Number.isFinite(vph)) lines.push(`- Perkiraan volume: sekitar ${fmtInt(vph)} kendaraan per jam (ini prediksi per jam, bukan per menit).`);
+            if (target) lines.push(`- Waktu yang kamu minta: ${target}${tz ? ' ' + tz : ''}.`);
+            if (mins != null && Number.isFinite(mins)) lines.push(`- Itu kira-kira ${Math.round(mins)} menit dari sekarang.`);
+            if (thr && (thr.p50 != null || thr.p75 != null || thr.p90 != null)) {
+                lines.push(`- Patokan sistem: p50=${fmtInt(thr.p50)} • p75=${fmtInt(thr.p75)} • p90=${fmtInt(thr.p90)} (semakin besar dari patokan, semakin padat).`);
+            }
+            if (nearby && nearby.length) {
+                lines.push('');
+                lines.push('Titik macet di sekitar lokasi ini (live dari CCTV):');
+                nearby.slice(0, 8).forEach((p, i) => {
+                    const nm = String(p.camera_name || p.camera_id || '-');
+                    const cg = String(p.congestion || '-');
+                    const cc = fmtInt(p.current_count);
+                    const dk = (p.distance_km != null) ? String(p.distance_km) : '-';
+                    lines.push(`${i + 1}. ${nm} — ${cg} (${cc}), ${dk} km`);
+                });
+            } else {
+                lines.push('');
+                lines.push('Info sekitar: tidak ada titik macet (live) yang terdeteksi dalam radius dekat lokasi ini.');
+            }
+
+            if (recent1h && recent1h.sum_new != null) {
+                const sumNew = Number(recent1h.sum_new || 0);
+                if (Number.isFinite(sumNew)) {
+                    lines.push('');
+                    lines.push('Analisa (realisasi 1 jam terakhir):');
+                    lines.push(`- Total kendaraan tercatat: ${fmtInt(sumNew)} kendaraan (≈ kendaraan/jam terakhir).`);
+                    if (vph != null && Number.isFinite(vph)) {
+                        const diff = Math.round(Number(vph) - sumNew);
+                        const sign = diff >= 0 ? '+' : '';
+                        lines.push(`- Selisih terhadap prediksi: ${sign}${fmtInt(diff)} kendaraan/jam.`);
+                    }
+                }
+            }
+            if (body) body.innerText = lines.join('\n');
+
+            const lat = payload.lat != null ? Number(payload.lat) : null;
+            const lng = payload.lng != null ? Number(payload.lng) : null;
+            const canMap = (typeof L !== 'undefined') && Number.isFinite(lat) && Number.isFinite(lng);
+
+            if (canMap) {
+                const mapEl = document.getElementById('prediction-map');
+                if (mapEl && !predictionMap) {
+                    predictionMap = L.map(mapEl, { zoomControl: true }).setView([lat, lng], 15);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(predictionMap);
+                    predictionNearbyLayer = L.layerGroup().addTo(predictionMap);
+                }
+                if (predictionMap) {
+                    predictionMap.setView([lat, lng], Math.max(predictionMap.getZoom() || 15, 15), { animate: true, duration: 0.6 });
+                    if (predictionMarker) {
+                        try { predictionMap.removeLayer(predictionMarker); } catch {}
+                        predictionMarker = null;
+                    }
+                    predictionMarker = L.marker([lat, lng]).addTo(predictionMap);
+                    try { predictionMarker.bindPopup(`<div style="font-weight:700">${camName}</div><div style="margin-top:4px">${status}</div>`).openPopup(); } catch {}
+                    if (predictionNearbyLayer) {
+                        try { predictionNearbyLayer.clearLayers(); } catch {}
+                        (nearby || []).slice(0, 12).forEach((p) => {
+                            const plat = Number(p.lat);
+                            const plng = Number(p.lng);
+                            if (!Number.isFinite(plat) || !Number.isFinite(plng)) return;
+                            const cg = String(p.congestion || '');
+                            const color = cg === 'MACET TOTAL' ? '#ef4444' : '#f97316';
+                            const nm = String(p.camera_name || p.camera_id || '-');
+                            const cc = fmtInt(p.current_count);
+                            const dk = (p.distance_km != null) ? String(p.distance_km) : '-';
+                            const m = L.circleMarker([plat, plng], { radius: 8, color, weight: 2, fillColor: color, fillOpacity: 0.55 });
+                            m.bindPopup(`<div style="font-weight:700">${nm}</div><div style="margin-top:4px">${cg} • ${cc} • ${dk} km</div>`);
+                            m.addTo(predictionNearbyLayer);
+                        });
+                    }
+                    setTimeout(() => { try { predictionMap.invalidateSize(); } catch {} }, 50);
+                }
+            } else {
+                const mapEl = document.getElementById('prediction-map');
+                if (mapEl) mapEl.innerHTML = '<div style="padding:16px;color:#94a3b8;font-size:12px">Koordinat kamera belum tersedia, jadi peta tidak bisa ditampilkan.</div>';
+            }
+        }
+
+        function closePredictionPopup() {
+            const root = document.getElementById('prediction-popup');
+            if (!root) return;
+            root.classList.add('hidden');
+        }
+
+        window.smarttrafficShowPredictionPopup = (action) => {
+            const payload = (action && typeof action === 'object') ? action : {};
+            openPredictionPopup(payload);
+        };
+
+        function openForecastPopup(payload) {
+            const root = document.getElementById('forecast-popup');
+            if (!root) return;
+            root.classList.remove('hidden');
+
+            const title = document.getElementById('forecast-popup-title');
+            const subtitle = document.getElementById('forecast-popup-subtitle');
+            const body = document.getElementById('forecast-popup-body');
+            const tableBody = document.getElementById('forecast-table-body');
+
+            const camName = String(payload.camera_name || payload.camera_id || '-');
+            const tz = String(payload.timezone_name || '').trim();
+            const days = payload.days != null ? Number(payload.days) : null;
+            const startDate = String(payload.start_date_local || '').trim();
+            const endDate = String(payload.end_date_local || '').trim();
+            const items = Array.isArray(payload.daily_forecast) ? payload.daily_forecast : [];
+            const nearby = Array.isArray(payload.nearby_congested) ? payload.nearby_congested : [];
+
+            if (title) title.innerText = `Forecast: ${camName}`;
+            if (subtitle) subtitle.innerText = (startDate && endDate) ? `${startDate} s/d ${endDate} ${tz}`.trim() : (tz ? tz : '-');
+
+            let worst = null;
+            const rank = (s) => {
+                const k = String(s || '').toUpperCase();
+                if (k === 'MACET TOTAL') return 4;
+                if (k === 'MACET') return 3;
+                if (k === 'PADAT LANCAR') return 2;
+                if (k === 'LANCAR') return 1;
+                return 0;
+            };
+
+            const lines = [];
+            lines.push(`Ini perkiraan ${days || '-'} hari ke depan berbasis pola historis per jam.`);
+            lines.push('Cara bacanya: Avg/jam = rata-rata per jam di hari itu. Puncak = jam paling ramai.');
+            if (items.length) {
+                items.forEach(it => {
+                    if (!it) return;
+                    if (!worst) worst = it;
+                    if (rank(it.status) > rank(worst.status)) worst = it;
+                    if (rank(it.status) === rank(worst.status) && safeNum(it.peak_vph) > safeNum(worst.peak_vph)) worst = it;
+                });
+            }
+            if (worst) {
+                lines.push(`Hari yang paling berpotensi padat: ${worst.date_local} (${worst.status}) dengan puncak sekitar ${worst.peak_hour} ~${fmtInt(worst.peak_vph)}/jam.`);
+            }
+            if (nearby && nearby.length) {
+                lines.push('');
+                lines.push('Titik macet live di sekitar kamera (saat ini):');
+                nearby.slice(0, 8).forEach((p, i) => {
+                    const nm = String(p.camera_name || p.camera_id || '-');
+                    const cg = String(p.congestion || '-');
+                    const cc = fmtInt(p.current_count);
+                    const dk = (p.distance_km != null) ? String(p.distance_km) : '-';
+                    lines.push(`${i + 1}. ${nm} — ${cg} (${cc}), ${dk} km`);
+                });
+            }
+            if (body) body.innerText = lines.join('\n');
+
+            if (tableBody) {
+                tableBody.innerHTML = '';
+                items.slice(0, 31).forEach(it => {
+                    const tr = document.createElement('tr');
+                    tr.className = "border-b border-slate-700/40 hover:bg-slate-700/20 transition-colors";
+                    const dt = String(it.date_local || '-');
+                    const wd = String(it.weekday || '').trim();
+                    const st = String(it.status || '-');
+                    const avg = fmtInt(it.avg_vph);
+                    const peak = `${String(it.peak_hour || '-')} • ${fmtInt(it.peak_vph)}/jam`;
+                    tr.innerHTML = `
+                        <td class="px-4 py-3 text-slate-200">${dt} ${wd}</td>
+                        <td class="px-4 py-3 text-slate-200">${st}</td>
+                        <td class="px-4 py-3 text-right text-sky-200 font-semibold">${avg}</td>
+                        <td class="px-4 py-3 text-right text-slate-200">${peak}</td>
+                    `;
+                    tableBody.appendChild(tr);
+                });
+            }
+
+            const lat = payload.lat != null ? Number(payload.lat) : null;
+            const lng = payload.lng != null ? Number(payload.lng) : null;
+            const canMap = (typeof L !== 'undefined') && Number.isFinite(lat) && Number.isFinite(lng);
+            if (canMap) {
+                const mapEl = document.getElementById('forecast-map');
+                if (mapEl && !forecastMap) {
+                    forecastMap = L.map(mapEl, { zoomControl: true }).setView([lat, lng], 14);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(forecastMap);
+                    forecastNearbyLayer = L.layerGroup().addTo(forecastMap);
+                }
+                if (forecastMap) {
+                    forecastMap.setView([lat, lng], Math.max(forecastMap.getZoom() || 14, 14), { animate: true, duration: 0.6 });
+                    if (forecastMarker) {
+                        try { forecastMap.removeLayer(forecastMarker); } catch {}
+                        forecastMarker = null;
+                    }
+                    forecastMarker = L.marker([lat, lng]).addTo(forecastMap);
+                    try { forecastMarker.bindPopup(`<div style="font-weight:700">${camName}</div><div style="margin-top:4px">Forecast</div>`).openPopup(); } catch {}
+                    if (forecastNearbyLayer) {
+                        try { forecastNearbyLayer.clearLayers(); } catch {}
+                        (nearby || []).slice(0, 12).forEach((p) => {
+                            const plat = Number(p.lat);
+                            const plng = Number(p.lng);
+                            if (!Number.isFinite(plat) || !Number.isFinite(plng)) return;
+                            const cg = String(p.congestion || '');
+                            const color = cg === 'MACET TOTAL' ? '#ef4444' : '#f97316';
+                            const nm = String(p.camera_name || p.camera_id || '-');
+                            const cc = fmtInt(p.current_count);
+                            const dk = (p.distance_km != null) ? String(p.distance_km) : '-';
+                            const m = L.circleMarker([plat, plng], { radius: 8, color, weight: 2, fillColor: color, fillOpacity: 0.55 });
+                            m.bindPopup(`<div style="font-weight:700">${nm}</div><div style="margin-top:4px">${cg} • ${cc} • ${dk} km</div>`);
+                            m.addTo(forecastNearbyLayer);
+                        });
+                    }
+                    setTimeout(() => { try { forecastMap.invalidateSize(); } catch {} }, 50);
+                }
+            } else {
+                const mapEl = document.getElementById('forecast-map');
+                if (mapEl) mapEl.innerHTML = '<div style="padding:16px;color:#94a3b8;font-size:12px">Koordinat kamera belum tersedia, jadi peta tidak bisa ditampilkan.</div>';
+            }
+        }
+
+        function closeForecastPopup() {
+            const root = document.getElementById('forecast-popup');
+            if (!root) return;
+            root.classList.add('hidden');
+        }
+
+        window.smarttrafficShowForecastPopup = (action) => {
+            const payload = (action && typeof action === 'object') ? action : {};
+            openForecastPopup(payload);
+        };
+
+        function buildTrendChart() {
+            const ctx = document.getElementById('trend-chart');
+            if (!ctx) return null;
+            if (typeof Chart === 'undefined') return null;
+            const c = ctx.getContext('2d');
+            return new Chart(c, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Density',
+                        data: [],
+                        borderColor: '#60a5fa',
+                        backgroundColor: 'rgba(96, 165, 250, 0.10)',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        fill: true,
+                        tension: 0.35
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 }, maxTicksLimit: 12 } },
+                        y: { grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: '#94a3b8', font: { size: 10 }, beginAtZero: true } }
+                    }
+                }
+            });
+        }
+
+        function buildClassChart() {
+            const ctx = document.getElementById('class-chart');
+            if (!ctx) return null;
+            if (typeof Chart === 'undefined') return null;
+            const c = ctx.getContext('2d');
+            return new Chart(c, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Cars', 'Motorcycles'],
+                    datasets: [{
+                        data: [0, 0],
+                        backgroundColor: ['rgba(16,185,129,0.85)', 'rgba(245,158,11,0.85)'],
+                        borderColor: ['rgba(16,185,129,0.2)', 'rgba(245,158,11,0.2)'],
+                        borderWidth: 2,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#cbd5e1', boxWidth: 10, font: { size: 11 } }
+                        }
+                    },
+                    cutout: '65%'
+                }
+            });
+        }
+
+        async function loadSources() {
+            const sel = document.getElementById('camera-filter');
+            if (!sel) return;
+            try {
+                const resp = await fetch('/api/sources', { cache: 'no-store' });
+                const sources = await resp.json();
+                const prev = sel.value || 'all';
+                sel.innerHTML = '<option value="all">Semua CCTV</option>';
+                if (Array.isArray(sources)) {
+                    sources.forEach(s => {
+                        if (!s || !s.id) return;
+                        const opt = document.createElement('option');
+                        opt.value = s.id;
+                        opt.innerText = s.name || s.id;
+                        sel.appendChild(opt);
+                    });
+                }
+                sel.value = prev;
+            } catch (e) {}
+        }
+
+        function updateTopTable(statsJson) {
+            const body = document.getElementById('top-table-body');
+            if (!body) return;
+            body.innerHTML = '';
+
+            const sources = (statsJson && statsJson.sources && typeof statsJson.sources === 'object') ? statsJson.sources : {};
+            const items = Object.entries(sources).map(([id, s]) => {
+                const name = (s && s.name) ? s.name : id;
+                const acc = safeNum(s && s.accumulated_count);
+                const live = safeNum(s && s.current_count);
+                const st = (s && s.status) ? String(s.status) : '-';
+                return { id, name, acc, live, st };
+            });
+            items.sort((a, b) => b.acc - a.acc);
+
+            items.slice(0, 12).forEach(it => {
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-slate-700/40 hover:bg-slate-700/20 transition-colors";
+                const stCls = it.st === 'online' ? 'text-emerald-300' : (it.st === 'offline' ? 'text-rose-300' : 'text-slate-400');
+                tr.innerHTML = `
+                    <td class="px-4 py-3 text-slate-200">${it.name}</td>
+                    <td class="px-4 py-3 text-right text-blue-300 font-semibold">${it.acc}</td>
+                    <td class="px-4 py-3 text-right text-slate-200">${it.live}</td>
+                    <td class="px-4 py-3 text-right ${stCls}">${it.st}</td>
+                `;
+                body.appendChild(tr);
+            });
+
+            const subtitle = document.getElementById('top-subtitle');
+            if (subtitle) subtitle.innerText = `${items.length} cameras`;
+        }
+
+        function movingAverage(values, windowSize) {
+            const n = Array.isArray(values) ? values.length : 0;
+            const w = Math.max(1, Math.floor(Number(windowSize) || 1));
+            const out = new Array(n);
+            let sum = 0;
+            for (let i = 0; i < n; i++) {
+                sum += safeNum(values[i]);
+                if (i >= w) sum -= safeNum(values[i - w]);
+                const denom = (i + 1 < w) ? (i + 1) : w;
+                out[i] = sum / denom;
+            }
+            return out;
+        }
+
+        function median(values) {
+            const arr = (Array.isArray(values) ? values : []).map(safeNum).filter(v => Number.isFinite(v)).sort((a, b) => a - b);
+            const n = arr.length;
+            if (!n) return 0;
+            const mid = Math.floor(n / 2);
+            return (n % 2) ? arr[mid] : (arr[mid - 1] + arr[mid]) / 2;
+        }
+
+        function sanitizeRollingSpike(series, windowSize, factor) {
+            const src = Array.isArray(series) ? series.map(safeNum) : [];
+            const n = src.length;
+            const w = Math.max(1, Math.floor(Number(windowSize) || 7));
+            const f = Math.max(1.5, Number(factor) || 3);
+            const out = src.slice();
+            const flagged = [];
+            for (let i = 0; i < n; i++) {
+                const start = Math.max(0, i - w);
+                const ref = out.slice(start, i);
+                if (ref.length < 4) continue;
+                const m = median(ref);
+                if (m <= 0) continue;
+                const cap = m * f;
+                if (out[i] > cap) {
+                    out[i] = cap;
+                    flagged.push(i);
+                }
+            }
+            return { series: out, flagged };
+        }
+
+        async function refreshAnalytics() {
+            const period = (document.getElementById('period-filter') || {}).value || '1h';
+            const cam = (document.getElementById('camera-filter') || {}).value || 'all';
+            const isAll = (cam === 'all');
+            const metric = 'density';
+            setStatusText('Memuat data...');
+
+            try {
+                const statsResp = await fetch('/api/stats', { cache: 'no-store' });
+                const statsJson = await statsResp.json();
+                const sources = (statsJson && statsJson.sources && typeof statsJson.sources === 'object') ? statsJson.sources : {};
+                const gt = (statsJson && statsJson.global_total) ? statsJson.global_total : {};
+                const lifetime = safeNum(gt.accumulated_count);
+
+                let onlineCount = 0;
+                Object.values(sources).forEach(s => {
+                    if (s && s.status === 'online') onlineCount += 1;
+                });
+
+                let density = 0;
+                if (!isAll && sources[cam]) density = safeNum(sources[cam].current_count);
+                else {
+                    const dens = Object.values(sources).map(s => safeNum(s && s.current_count));
+                    density = dens.length ? Math.round(dens.reduce((a, b) => a + b, 0) / dens.length) : 0;
+                }
+
+                const kVol = document.getElementById('kpi-volume');
+                const kCars = document.getElementById('kpi-cars');
+                const kMot = document.getElementById('kpi-motors');
+                const kDen = document.getElementById('kpi-density');
+                const kLife = document.getElementById('kpi-lifetime');
+                const kOn = document.getElementById('kpi-online');
+                if (kDen) kDen.innerText = String(density);
+                if (kLife) kLife.innerText = String(lifetime);
+                if (kOn) kOn.innerText = String(onlineCount);
+
+                const pieSub = document.getElementById('pie-subtitle');
+                if (pieSub) pieSub.innerText = isAll ? `Global (${period})` : `Camera (${period})`;
+
+                let url = `/api/history?period=${encodeURIComponent(period)}`;
+                if (!isAll) url += `&camera_id=${encodeURIComponent(cam)}`;
+                const histResp = await fetch(url, { cache: 'no-store' });
+                const histJson = await histResp.json();
+                const rows = Array.isArray(histJson) ? histJson : [];
+
+                const labels = rows.map(r => r.label);
+                const vols = rows.map(r => safeNum(r.count));
+                const volsPerCam = rows.map(r => safeNum(r.count_per_cam));
+                const densAvg = rows.map(r => safeNum(r.density_avg));
+                const carsSeries = rows.map(r => safeNum(r.cars));
+                const motorsSeries = rows.map(r => safeNum(r.motors));
+                const sumVol = vols.reduce((a, b) => a + b, 0);
+                const sumCars = carsSeries.reduce((a, b) => a + b, 0);
+                const sumMotors = motorsSeries.reduce((a, b) => a + b, 0);
+                const sumTraffic = sumCars + sumMotors;
+                const avgDensity = densAvg.length ? Math.round(densAvg.reduce((a, b) => a + b, 0) / densAvg.length) : 0;
+                const maxActiveCams = Math.max(0, ...rows.map(r => safeNum(r.active_cams)));
+                const sumPerCam = volsPerCam.reduce((a, b) => a + b, 0);
+
+                if (kVol) kVol.innerText = String(Math.round(sumTraffic));
+                if (kCars) kCars.innerText = String(sumCars);
+                if (kMot) kMot.innerText = String(sumMotors);
+
+                if (classChart) {
+                    classChart.data.datasets[0].data = [sumCars, sumMotors];
+                    classChart.update();
+                }
+
+                updateTopTable(statsJson);
+                let anomalyCount = 0;
+                if (trendChart) {
+                    trendChart.data.labels = labels;
+                    const smoothWindow = (period === '30d') ? 7 : ((period === '7d') ? 3 : 1);
+                    let baseSeries = (metric === 'density') ? densAvg : (isAll ? volsPerCam : vols);
+                    if (metric === 'flow' && isAll && period === '30d') {
+                        const sanitized = sanitizeRollingSpike(baseSeries, 7, 3);
+                        baseSeries = sanitized.series;
+                        anomalyCount = sanitized.flagged.length;
+                        if (kVol) kVol.innerText = String(Math.round(baseSeries.reduce((a, b) => a + safeNum(b), 0)));
+                    }
+                    const series = (smoothWindow > 1) ? movingAverage(baseSeries, smoothWindow) : baseSeries;
+                    trendChart.data.datasets[0].data = series;
+                    trendChart.update();
+                }
+                const trSub = document.getElementById('trend-subtitle');
+                if (trSub) {
+                    const base = isAll ? `Global (${period})` : `Camera (${period})`;
+                    const suffix = (period === '30d') ? ' • smooth 7d' : ((period === '7d') ? ' • smooth 3pt' : '');
+                    const m = (metric === 'density') ? 'Density' : 'Flow';
+                    const norm = (metric === 'flow' && isAll) ? ' • per camera' : '';
+                    trSub.innerText = `${base} • ${m}${norm}${suffix}`;
+                }
+
+                const camsTxt = isAll && maxActiveCams > 0 ? ` • up to ${maxActiveCams} cams` : '';
+                const anomTxt = anomalyCount > 0 ? ` • ${anomalyCount} spike capped` : '';
+                setStatusText(`OK (${rows.length} points${camsTxt}${anomTxt})`);
+            } catch (e) {
+                setStatusText('Gagal memuat data.');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            trendChart = buildTrendChart();
+            classChart = buildClassChart();
+            await loadSources();
+            await refreshAnalytics();
+            const popupClose = document.getElementById('prediction-popup-close');
+            const popupOverlay = document.getElementById('prediction-popup-overlay');
+            if (popupClose) popupClose.addEventListener('click', closePredictionPopup);
+            if (popupOverlay) popupOverlay.addEventListener('click', closePredictionPopup);
+            const fClose = document.getElementById('forecast-popup-close');
+            const fOverlay = document.getElementById('forecast-popup-overlay');
+            if (fClose) fClose.addEventListener('click', closeForecastPopup);
+            if (fOverlay) fOverlay.addEventListener('click', closeForecastPopup);
+            const p = document.getElementById('period-filter');
+            const c = document.getElementById('camera-filter');
+            const r = document.getElementById('refresh-analytics');
+            if (p) p.addEventListener('change', refreshAnalytics);
+            if (c) c.addEventListener('change', refreshAnalytics);
+            if (r) r.addEventListener('click', refreshAnalytics);
+            setInterval(refreshAnalytics, 5000);
+        });
+    </script>
+{% endblock %}

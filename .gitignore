@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+venv/
+env/
+.venv/
+.deps/
+
+# Data & Database
+data_lake/
+data/traffic_data.db
+data/*.tmp
+data/*.bak
+data/*.broken
+data/*.bak.*
+data/traffic_stats.json.bak*
+data/traffic_stats.json.broken*
+*.log
+stats_dump*.json
+
+# Large model files (download separately)
+models/yolov8l.pt
+
+# Environment / Secrets
+.env
+*.env.local
+
+# System
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+.kiro/

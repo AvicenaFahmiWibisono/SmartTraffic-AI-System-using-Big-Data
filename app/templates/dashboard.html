@@ -1,0 +1,2912 @@
+{% extends "base.html" %}
+{% block title %}SmartTraffic AI - Dashboard{% endblock %}
+{% block header_kicker %}Dashboard{% endblock %}
+{% block header_title %}Global Analytics{% endblock %}
+{% block header_actions %}
+    <button onclick="toggleDbWrite()" id="db-write-btn" class="hidden sm:flex items-center gap-2 px-3 py-2 bg-slate-800/40 hover:bg-slate-800/70 text-white rounded-lg text-sm font-semibold transition-all border border-slate-700 hover:border-emerald-500/40">
+        <i class="fas fa-database text-emerald-300" id="db-write-icon"></i>
+        <span id="db-write-text">DB: Writing</span>
+    </button>
+    <button onclick="showPredictiveModal()" class="hidden sm:flex items-center gap-2 px-3 py-2 bg-slate-800/40 hover:bg-slate-800/70 text-white rounded-lg text-sm font-semibold transition-all border border-slate-700 hover:border-purple-500/40">
+        <i class="fas fa-brain text-purple-300"></i>
+        <span>Predictive AI</span>
+    </button>
+    <button onclick="showDataLakeStats()" class="hidden sm:flex items-center gap-2 px-3 py-2 bg-slate-800/40 hover:bg-slate-800/70 text-white rounded-lg text-sm font-semibold transition-all border border-slate-700 hover:border-sky-500/40">
+        <i class="fas fa-chart-line text-sky-300"></i>
+        <span>Analytics</span>
+    </button>
+{% endblock %}
+{% block head_extra %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+{% endblock %}
+{% block style_extra %}
+    <style>
+        /* Dark Mode for Leaflet Routing Machine - Enhanced */
+        .leaflet-routing-container {
+            background-color: rgba(30, 41, 59, 0.95) !important; /* Slate-800 with opacity */
+            color: #e2e8f0 !important; /* Slate-200 */
+            border: 1px solid rgba(71, 85, 105, 0.5) !important;
+            border-radius: 12px !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5) !important;
+            font-family: 'Inter', sans-serif !important;
+            padding: 10px !important;
+            margin-top: 10px !important;
+            margin-right: 10px !important;
+            width: 340px !important; /* Slightly wider */
+            max-width: 90vw !important; /* Mobile Responsive */
+            backdrop-filter: blur(8px);
+        }
+        
+        /* Hide the default header if it looks messy, or style it */
+        .leaflet-routing-container h2 {
+            font-size: 14px !important;
+            font-weight: 600 !important;
+            margin-bottom: 10px !important;
+            color: #fff !important;
+        }
+
+        .leaflet-routing-alt {
+            max-height: 240px;
+            overflow-y: auto;
+            padding-right: 5px; /* Space for scrollbar */
+        }
+        
+        /* Custom Scrollbar */
+        .leaflet-routing-alt::-webkit-scrollbar {
+            width: 6px;
+        }
+        .leaflet-routing-alt::-webkit-scrollbar-track {
+            background: #1e293b;
+            border-radius: 3px;
+        }
+        .leaflet-routing-alt::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 3px;
+        }
+        .leaflet-routing-alt::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+
+        /* Direction Steps */
+        .leaflet-routing-alt table {
+            border-collapse: separate;
+            border-spacing: 0 4px;
+            width: 100%;
+        }
+        .leaflet-routing-alt tr {
+            transition: all 0.2s ease;
+            border-radius: 4px;
+        }
+        .leaflet-routing-alt tr:hover {
+            background-color: rgba(51, 65, 85, 0.8) !important; /* Slate-700 */
+            cursor: pointer;
+            transform: translateX(2px);
+        }
+        .leaflet-routing-alt td {
+            padding: 8px 6px !important;
+            border: none !important;
+            font-size: 13px !important;
+            color: #cbd5e1 !important; /* Slate-300 */
+        }
+        
+        /* Inputs */
+        .leaflet-routing-geocoders div {
+            padding: 4px 0 !important;
+        }
+        .leaflet-routing-geocoders input {
+            background-color: #0f172a !important; /* Slate-900 */
+            color: white !important;
+            border: 1px solid #475569 !important;
+            border-radius: 6px !important;
+            padding: 8px 12px !important;
+            font-size: 13px !important;
+            width: 100% !important;
+            transition: border-color 0.2s;
+        }
+        .leaflet-routing-geocoders input:focus {
+            outline: none !important;
+            border-color: #3b82f6 !important; /* Blue-500 */
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+        }
+        .leaflet-routing-geocoders button {
+            background: none !important;
+            border: none !important;
+            color: #94a3b8 !important;
+            font-size: 16px !important;
+            cursor: pointer;
+            margin-right: 5px !important;
+        }
+        .leaflet-routing-geocoders button:hover {
+            color: #ef4444 !important; /* Red for remove */
+        }
+
+        /* Add Waypoint Button */
+        .leaflet-routing-add-waypoint {
+            background-color: #3b82f6 !important; /* Blue-500 */
+            border-radius: 50%;
+            width: 24px !important;
+            height: 24px !important;
+            line-height: 24px !important;
+            margin-top: 4px !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: transform 0.2s, background-color 0.2s;
+        }
+        .leaflet-routing-add-waypoint:hover {
+            background-color: #2563eb !important;
+            transform: scale(1.1);
+        }
+        .leaflet-routing-add-waypoint:after {
+            color: white !important;
+            font-size: 18px !important;
+            font-weight: bold;
+            line-height: 22px !important;
+        }
+
+        /* Icons in instructions */
+        .leaflet-routing-icon {
+            background-image: url('https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet.routing.icons.png');
+            opacity: 0.8;
+        }
+        
+        /* Custom Context Menu */
+        .custom-context-menu {
+            position: absolute;
+            background: #1e293b;
+            border: 1px solid #475569;
+            border-radius: 6px;
+            padding: 5px 0;
+            z-index: 10000;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            min-width: 150px;
+        }
+        .custom-context-menu-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            color: #e2e8f0;
+            font-size: 13px;
+        }
+        .custom-context-menu-item:hover {
+            background-color: #3b82f6;
+            color: white;
+        }
+
+        .leaflet-popup-content-wrapper,
+        .leaflet-popup-tip {
+            background: rgba(15, 23, 42, 0.92) !important;
+            color: #e2e8f0 !important;
+        }
+        .leaflet-popup-content-wrapper {
+            border: 1px solid rgba(255, 255, 255, 0.10) !important;
+            border-radius: 14px !important;
+            box-shadow: 0 18px 45px -28px rgba(0,0,0,0.85) !important;
+            backdrop-filter: blur(10px);
+        }
+        .leaflet-popup-content {
+            margin: 10px 12px !important;
+        }
+        .leaflet-container a.leaflet-popup-close-button {
+            color: #94a3b8 !important;
+        }
+        .leaflet-container a.leaflet-popup-close-button:hover {
+            color: #fff !important;
+        }
+        .leaflet-control-geocoder {
+            border-radius: 12px !important;
+            overflow: hidden;
+        }
+        .leaflet-control-geocoder-form input {
+            background: rgba(15, 23, 42, 0.9) !important;
+            color: #e2e8f0 !important;
+            border: 1px solid rgba(255,255,255,0.10) !important;
+        }
+        .leaflet-control-geocoder-alternatives {
+            background: rgba(2, 6, 23, 0.95) !important;
+            border: 1px solid rgba(255,255,255,0.10) !important;
+        }
+
+        #routing-alert {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            z-index: 10000;
+            width: min(320px, calc(100vw - 36px));
+            max-height: min(70%, calc(100vh - 200px));
+            overflow: hidden;
+            border-radius: 16px;
+            background: rgba(10, 15, 30, 0.82);
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 24px 55px -28px rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(18px) saturate(140%);
+            -webkit-backdrop-filter: blur(18px) saturate(140%);
+            color: #e2e8f0;
+            transition: all 0.25s ease;
+        }
+        #routing-alert.routing-alert-collapsed { max-height: 52px !important; }
+        #routing-alert.routing-alert-collapsed .routing-alert-scroll,
+        #routing-alert.routing-alert-collapsed .routing-alert-footer-wrap { display: none !important; }
+        #routing-alert .routing-alert-inner { padding: 12px 14px; }
+        #routing-alert .routing-alert-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 10px; }
+        #routing-alert .routing-alert-title { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13px; color: #f8fafc; letter-spacing: -0.015em; }
+        #routing-alert .routing-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 9999px; border: 1px solid rgba(255,255,255,0.12); }
+        #routing-alert .routing-badge.car { background: rgba(59, 130, 246, 0.18); color: #93c5fd; border-color: rgba(59, 130, 246, 0.25); }
+        #routing-alert .routing-badge.bike { background: rgba(245, 158, 11, 0.18); color: #fbbf24; border-color: rgba(245, 158, 11, 0.25); }
+        #routing-alert .routing-alert-btn { width: 26px; height: 26px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; background: rgba(2, 6, 23, 0.55); border: 1px solid rgba(255,255,255,0.08); color: rgba(226,232,240,0.75); cursor: pointer; transition: all 0.15s ease; font-size: 11px; }
+        #routing-alert .routing-alert-btn:hover { color: #fff; background: rgba(2, 6, 23, 0.75); }
+        #routing-alert .routing-alert-close { width: 26px; height: 26px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; background: rgba(2, 6, 23, 0.55); border: 1px solid rgba(255,255,255,0.08); color: rgba(226,232,240,0.75); cursor: pointer; transition: all 0.15s ease; font-size: 11px; }
+        #routing-alert .routing-alert-close:hover { color: #fff; background: rgba(2, 6, 23, 0.75); }
+        #routing-alert .routing-alert-scroll { overflow-y: auto; max-height: 320px; padding-right: 4px; }
+        #routing-alert .routing-alert-scroll::-webkit-scrollbar { width: 4px; }
+        #routing-alert .routing-alert-scroll::-webkit-scrollbar-track { background: transparent; }
+        #routing-alert .routing-alert-scroll::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.30); border-radius: 9999px; }
+        #routing-alert .routing-route-card { background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 10px 11px; margin-bottom: 8px; }
+        #routing-alert .routing-route-card.best { border-color: rgba(16,185,129,0.35); background: rgba(16,185,129,0.06); box-shadow: 0 8px 22px -16px rgba(16,185,129,0.45); }
+        #routing-alert .routing-route-card.warn { border-color: rgba(244,63,94,0.28); }
+        #routing-alert .routing-route-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+        #routing-alert .routing-route-name { font-weight: 700; font-size: 12.5px; color: #f8fafc; }
+        #routing-alert .routing-route-pill { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 9999px; border: 1px solid rgba(255,255,255,0.12); }
+        #routing-alert .routing-route-pill.ok { background: rgba(16,185,129,0.16); color: #34d399; border-color: rgba(16,185,129,0.22); }
+        #routing-alert .routing-route-pill.bad { background: rgba(244,63,94,0.16); color: #fb7185; border-color: rgba(244,63,94,0.22); }
+        #routing-alert .routing-metrics { display: grid; grid-template-columns: 1fr; gap: 3px; font-size: 11.5px; color: #cbd5e1; line-height: 1.5; }
+        #routing-alert .routing-metrics strong { color: #e2e8f0; }
+        #routing-alert .routing-delay { color: #fb7185; font-weight: 700; }
+        #routing-alert .routing-total { font-size: 12px; font-weight: 800; color: #e0f2fe; margin-top: 2px; }
+        #routing-alert .routing-zones { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; }
+        #routing-alert .routing-chip { font-size: 10px; padding: 2px 7px; border-radius: 9999px; background: rgba(2,6,23,0.45); border: 1px solid rgba(255,255,255,0.08); color: #cbd5e1; }
+        #routing-alert .routing-chip.warn { background: rgba(244,63,94,0.12); border-color: rgba(244,63,94,0.20); color: #fda4af; }
+        #routing-alert .routing-footer { margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px; }
+        #routing-alert .routing-action { width: 100%; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(59,130,246,0.30); background: rgba(59,130,246,0.18); color: #e0f2fe; font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.15s ease; }
+        #routing-alert .routing-action:hover { background: rgba(59,130,246,0.28); border-color: rgba(59,130,246,0.42); }
+        #routing-alert .routing-hint { font-size: 10.5px; color: #94a3b8; margin-top: 6px; line-height: 1.45; }
+        @media (max-width: 640px) {
+            #routing-alert { right: 12px; left: 12px; width: auto; top: 12px; }
+        }
+
+        /* Per-segment route tooltip */
+        .route-seg-tooltip {
+            background: rgba(10, 15, 30, 0.95) !important;
+            border: 1px solid rgba(255, 255, 255, 0.10) !important;
+            color: #e2e8f0 !important;
+            border-radius: 10px !important;
+            padding: 10px 12px !important;
+            box-shadow: 0 16px 45px -20px rgba(0,0,0,0.9) !important;
+            backdrop-filter: blur(12px);
+            font-family: 'Inter', sans-serif !important;
+        }
+        .route-seg-tooltip::before { display: none !important; }
+        .leaflet-tooltip.route-seg-tooltip { white-space: normal !important; }
+
+        /* Make the route overlay pane show a pointer cursor so users know
+           they can hover each colored chunk for details. */
+        .leaflet-pane.leaflet-routeOverlayPane-pane path { cursor: pointer; }
+        .leaflet-container .leaflet-interactive { cursor: pointer; }
+
+        /* Route gradient legend */
+        .route-legend {
+            position: absolute;
+            bottom: 1rem;
+            left: 1rem;
+            z-index: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.5rem 0.75rem;
+            background: rgba(10, 15, 30, 0.85);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 0.75rem;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 16px 40px -20px rgba(0,0,0,0.9);
+            font-size: 0.7rem;
+            color: #cbd5e1;
+        }
+        .route-legend .bar {
+            width: 120px;
+            height: 6px;
+            border-radius: 9999px;
+            background: linear-gradient(90deg, #ef4444 0%, #f59e0b 35%, #eab308 65%, #10b981 100%);
+        }
+        .route-legend .label { display: flex; justify-content: space-between; width: 120px; font-size: 0.65rem; color: #94a3b8; }
+
+        /* ===== Dashboard polish ===== */
+        .stat-card {
+            background: linear-gradient(160deg, rgba(30, 41, 59, 0.65) 0%, rgba(15, 23, 42, 0.75) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 1.1rem;
+            padding: 1.25rem 1.35rem;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+            backdrop-filter: blur(12px);
+        }
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            padding: 1px;
+            background: linear-gradient(135deg, var(--accent, rgba(99, 102, 241, 0.45)), transparent 55%);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.12);
+            box-shadow: 0 24px 45px -30px rgba(0, 0, 0, 0.9);
+        }
+        .stat-card .stat-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; font-weight: 700; }
+        .stat-card .stat-value { font-size: clamp(1.9rem, 2.5vw, 2.6rem); font-weight: 800; color: #f8fafc; line-height: 1.1; margin-top: 0.45rem; letter-spacing: -0.02em; }
+        .stat-card .stat-icon {
+            width: 42px; height: 42px; border-radius: 0.75rem;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .stat-card .stat-sub { font-size: 0.7rem; color: #64748b; margin-top: 0.35rem; letter-spacing: 0.02em; }
+        .stat-card .stat-bar-track { width: 100%; height: 5px; background: rgba(255,255,255,0.06); border-radius: 9999px; overflow: hidden; margin-top: 1rem; }
+        .stat-card .stat-bar-fill { height: 100%; border-radius: 9999px; transition: width 1s ease; }
+        .stat-card .stat-bar-meta { display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; color: #94a3b8; margin-top: 0.4rem; }
+
+        .stat-card.indigo { --accent: rgba(99, 102, 241, 0.55); }
+        .stat-card.indigo .stat-icon { background: rgba(99, 102, 241, 0.14); color: #a5b4fc; border-color: rgba(99, 102, 241, 0.28); }
+        .stat-card.green { --accent: rgba(16, 185, 129, 0.55); }
+        .stat-card.green .stat-icon { background: rgba(16, 185, 129, 0.14); color: #6ee7b7; border-color: rgba(16, 185, 129, 0.28); }
+        .stat-card.green .stat-bar-fill { background: linear-gradient(90deg, #10b981, #34d399); }
+        .stat-card.amber { --accent: rgba(245, 158, 11, 0.55); }
+        .stat-card.amber .stat-icon { background: rgba(245, 158, 11, 0.14); color: #fbbf24; border-color: rgba(245, 158, 11, 0.28); }
+        .stat-card.amber .stat-bar-fill { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+
+        /* Map section */
+        .map-panel {
+            background: rgba(15, 23, 42, 0.58);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 1.25rem;
+            box-shadow: 0 18px 45px -28px rgba(0, 0, 0, 0.85);
+            overflow: hidden;
+        }
+        .map-panel-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 1rem 1.35rem;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            gap: 1rem;
+        }
+        .map-panel-header .title-wrap { display: flex; align-items: center; gap: 0.75rem; min-width: 0; }
+        .map-panel-header .title-icon {
+            width: 40px; height: 40px; border-radius: 0.75rem;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(56, 189, 248, 0.15));
+            border: 1px solid rgba(99, 102, 241, 0.28);
+            display: flex; align-items: center; justify-content: center;
+            color: #a5b4fc;
+            flex-shrink: 0;
+        }
+        .map-panel-header .title-text h2 { font-size: 1.05rem; font-weight: 700; color: #f8fafc; letter-spacing: -0.01em; }
+        .map-panel-header .title-text p { font-size: 0.72rem; color: #64748b; margin-top: 0.15rem; }
+        .map-panel-header .header-chip {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            font-size: 0.7rem; font-weight: 600;
+            padding: 0.35rem 0.75rem;
+            border-radius: 9999px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            color: #6ee7b7;
+        }
+
+        /* Header-mounted map control buttons */
+        .map-ctrl-btn {
+            height: 36px;
+            padding: 0 0.8rem;
+            border-radius: 0.7rem;
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid rgba(255,255,255,0.07);
+            color: #cbd5e1;
+            display: inline-flex; align-items: center; justify-content: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            font-size: 0.78rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+        .map-ctrl-btn:hover { background: rgba(30, 41, 59, 0.9); color: #fff; border-color: rgba(99, 102, 241, 0.35); transform: translateY(-1px); }
+        .map-ctrl-btn.icon-only { width: 36px; padding: 0; }
+        .map-ctrl-btn.active { background: rgba(79, 70, 229, 0.3); border-color: rgba(99, 102, 241, 0.5); color: #fff; }
+
+        /* Camera cards */
+        .cam-card {
+            background: linear-gradient(160deg, rgba(30, 41, 59, 0.55), rgba(15, 23, 42, 0.7));
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 1.1rem;
+            padding: 1.15rem 1.15rem 1rem;
+            transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+        .cam-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #64748b, transparent);
+            transition: background 0.25s ease;
+        }
+        .cam-card.active::before { background: linear-gradient(90deg, #3b82f6, #8b5cf6, transparent); }
+        .cam-card.offline::before { background: linear-gradient(90deg, #ef4444, transparent); }
+        .cam-card:hover { transform: translateY(-3px); border-color: rgba(59, 130, 246, 0.28); box-shadow: 0 22px 45px -30px rgba(0, 0, 0, 0.9); }
+        .cam-metric { background: rgba(2, 6, 23, 0.45); border: 1px solid rgba(255,255,255,0.05); border-radius: 0.65rem; padding: 0.55rem 0.7rem; text-align: center; }
+        .cam-metric .lbl { font-size: 0.65rem; color: #64748b; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 600; }
+        .cam-metric .val { font-size: 1.15rem; font-weight: 800; color: #f8fafc; margin-top: 0.2rem; letter-spacing: -0.01em; }
+        .cam-metric .val.accent { color: #60a5fa; }
+
+        /* Section heading */
+        .section-heading {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 1.1rem;
+        }
+        .section-heading h2 { font-size: 1.1rem; font-weight: 700; color: #f8fafc; display: flex; align-items: center; gap: 0.6rem; letter-spacing: -0.01em; }
+        .section-heading .ico {
+            width: 32px; height: 32px; border-radius: 0.6rem;
+            background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #60a5fa;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.85rem;
+        }
+        .section-heading .count-chip {
+            font-size: 0.7rem; font-weight: 600;
+            color: #94a3b8;
+            padding: 0.3rem 0.7rem;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 9999px;
+        }
+
+    </style>
+{% endblock %}
+{% block content %}
+    <div class="space-y-6 max-w-[1600px] mx-auto">
+
+        <!-- Global Aggregate Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
+            <!-- Total All Cameras -->
+            <div class="stat-card indigo">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="stat-label">Total Traffic · 30 Days</p>
+                        <h2 class="stat-value tabular-nums" id="global-total">0</h2>
+                        <p class="stat-sub"><i class="fas fa-clock-rotate-left mr-1 opacity-70"></i>Rolling 30-day volume</p>
+                    </div>
+                    <div class="stat-icon">
+                        <i class="fas fa-globe"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Cars -->
+            <div class="stat-card green">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="stat-label">Cars · 30 Days</p>
+                        <h2 class="stat-value tabular-nums" id="global-cars">0</h2>
+                    </div>
+                    <div class="stat-icon">
+                        <i class="fas fa-car"></i>
+                    </div>
+                </div>
+                <div class="stat-bar-track">
+                    <div class="stat-bar-fill" style="width: 0%" id="bar-global-cars"></div>
+                </div>
+                <div class="stat-bar-meta">
+                    <span>Share of total</span>
+                    <span class="text-emerald-300 font-semibold tabular-nums" id="pct-global-cars">0%</span>
+                </div>
+            </div>
+
+            <!-- Total Motorcycles -->
+            <div class="stat-card amber">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="stat-label">Motorcycles · 30 Days</p>
+                        <h2 class="stat-value tabular-nums" id="global-motors">0</h2>
+                    </div>
+                    <div class="stat-icon">
+                        <i class="fas fa-motorcycle"></i>
+                    </div>
+                </div>
+                <div class="stat-bar-track">
+                    <div class="stat-bar-fill" style="width: 0%" id="bar-global-motors"></div>
+                </div>
+                <div class="stat-bar-meta">
+                    <span>Share of total</span>
+                    <span class="text-amber-300 font-semibold tabular-nums" id="pct-global-motors">0%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Map Section -->
+        <div class="map-panel">
+            <div class="map-panel-header">
+                <div class="title-wrap">
+                    <div class="title-icon">
+                        <i class="fas fa-map-marked-alt"></i>
+                    </div>
+                    <div class="title-text min-w-0">
+                        <h2 class="truncate">Camera Map <span class="text-slate-500 font-normal text-sm">· Java</span></h2>
+                        <p>Cari kamera (nama/ID) atau lokasi, lalu tekan Enter.</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    <span class="header-chip hidden md:inline-flex">
+                        <span class="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        Live
+                    </span>
+                    <button onclick="toggleVehicleMode()" id="vehicle-mode-btn" class="map-ctrl-btn" title="Ganti Mode Kendaraan">
+                        <i class="fas fa-car" id="vehicle-mode-icon"></i>
+                        <span id="vehicle-mode-text">Mobil</span>
+                    </button>
+                    <button onclick="toggleEditMode()" id="edit-map-btn" class="map-ctrl-btn icon-only" title="Edit Map Layout">
+                        <i class="fas fa-lock" id="edit-map-icon"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="relative">
+                <div id="map" class="w-full h-[520px] md:h-[680px] lg:h-[760px] z-0 relative bg-slate-900"></div>
+
+                <!-- Search bar overlay -->
+                <div class="absolute top-4 left-4 z-[500] w-[min(380px,calc(100%-2rem))]">
+                    <div class="flex items-center gap-2 bg-slate-950/70 backdrop-blur-xl border border-white/10 rounded-xl px-3 py-2.5 shadow-2xl shadow-black/40">
+                        <i class="fas fa-magnifying-glass text-slate-400 text-xs"></i>
+                        <input id="map-search" list="camera-options" type="text" placeholder="Cari kamera atau lokasi…"
+                               class="flex-1 bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none" />
+                        <button id="map-search-clear" class="text-slate-500 hover:text-white transition-colors px-1.5 py-0.5 rounded-md hover:bg-white/5" title="Clear">
+                            <i class="fas fa-xmark text-xs"></i>
+                        </button>
+                    </div>
+                    <datalist id="camera-options"></datalist>
+                </div>
+
+                <!-- Route Color Legend (shown while a route is active) -->
+                <div id="route-legend" class="route-legend hidden">
+                    <div>
+                        <div class="label"><span>Macet</span><span>Lancar</span></div>
+                        <div class="bar"></div>
+                    </div>
+                </div>
+
+                <!-- Prediction Mode Indicator (Hidden by default) -->
+                <div id="prediction-mode-indicator" class="hidden absolute top-6 left-1/2 transform -translate-x-1/2 z-[1000] bg-slate-900/95 border border-purple-500 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-4 backdrop-blur-md transition-all duration-300 animate-fadeInDown">
+                    <div class="flex items-center gap-3">
+                        <span class="relative flex h-3 w-3">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-3 w-3 bg-purple-500"></span>
+                        </span>
+                        <div>
+                            <span class="font-bold text-sm text-purple-200 block leading-none">PREDICTION MODE</span>
+                            <span class="text-[10px] text-purple-400 uppercase tracking-wider">AI Simulation</span>
+                        </div>
+                    </div>
+                    <div class="h-8 w-px bg-slate-700"></div>
+                    <div class="flex flex-col group relative">
+                         <span class="text-[10px] text-gray-500 uppercase">Target Time</span>
+                         <div class="flex items-center gap-2 cursor-pointer hover:text-purple-300 transition-colors" onclick="document.getElementById('quick-predict-time').showPicker()">
+                            <span class="text-xs font-mono text-white group-hover:text-purple-300" id="prediction-time-display">--:--</span>
+                            <i class="fas fa-pencil-alt text-[10px] text-gray-500 group-hover:text-purple-400"></i>
+                         </div>
+                         <input type="datetime-local" id="quick-predict-time" class="absolute opacity-0 w-0 h-0 top-0 left-0" onchange="updatePredictionTime(this.value)">
+                    </div>
+                    <button onclick="exitPredictionMode()" class="ml-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 hover:text-red-300 border border-red-500/30 rounded-full px-3 py-1 text-xs font-bold transition-all flex items-center gap-2">
+                        <span>EXIT</span>
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Camera Grid -->
+        <div>
+            <div class="section-heading">
+                <h2>
+                    <span class="ico"><i class="fas fa-video"></i></span>
+                    Connected Cameras
+                </h2>
+                <span class="count-chip" id="camera-count-chip">0 kamera</span>
+            </div>
+            <div id="camera-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5">
+                <!-- Camera Cards will be injected here -->
+                <div class="col-span-full text-center text-gray-500 py-10 animate-pulse">
+                    Loading camera data...
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-[2000] flex flex-col gap-2"></div>
+
+    <script>
+        // DB Write Pause Toggle
+        let dbWritePaused = false;
+
+        async function checkDbWriteState() {
+            try {
+                const r = await fetch('/api/db_write_pause');
+                const d = await r.json();
+                dbWritePaused = d.paused;
+                updateDbWriteBtn();
+            } catch (e) {}
+        }
+
+        function updateDbWriteBtn() {
+            const btn = document.getElementById('db-write-btn');
+            const icon = document.getElementById('db-write-icon');
+            const text = document.getElementById('db-write-text');
+            if (!btn) return;
+            if (dbWritePaused) {
+                icon.className = 'fas fa-pause-circle text-red-400';
+                text.textContent = 'DB: Paused';
+                btn.classList.remove('hover:border-emerald-500/40');
+                btn.classList.add('hover:border-red-500/40', 'border-red-500/30');
+            } else {
+                icon.className = 'fas fa-database text-emerald-300';
+                text.textContent = 'DB: Writing';
+                btn.classList.remove('hover:border-red-500/40', 'border-red-500/30');
+                btn.classList.add('hover:border-emerald-500/40');
+            }
+        }
+
+        async function toggleDbWrite() {
+            try {
+                const r = await fetch('/api/db_write_pause', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                const d = await r.json();
+                dbWritePaused = d.paused;
+                updateDbWriteBtn();
+                showToast(dbWritePaused ? 'DB write PAUSED — aman untuk edit di pgAdmin' : 'DB write RESUMED — data kembali mengalir', dbWritePaused ? 'info' : 'success');
+            } catch (e) {
+                showToast('Gagal toggle DB write', 'error');
+            }
+        }
+
+        checkDbWriteState();
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            let bgClass = 'bg-slate-800';
+            let icon = 'fa-info-circle';
+            let textClass = 'text-white';
+            
+            if (type === 'success') {
+                bgClass = 'bg-green-600';
+                icon = 'fa-check-circle';
+            } else if (type === 'error') {
+                bgClass = 'bg-red-600';
+                icon = 'fa-exclamation-circle';
+            } else if (type === 'loading') {
+                bgClass = 'bg-blue-600';
+                icon = 'fa-spinner fa-spin';
+            }
+            
+            toast.className = `${bgClass} ${textClass} px-4 py-3 rounded-lg shadow-xl flex items-center gap-3 transform transition-all duration-300 translate-y-10 opacity-0 min-w-[250px] border border-white/10`;
+            toast.innerHTML = `
+                <i class="fas ${icon} text-lg"></i>
+                <span class="font-medium text-sm">${message}</span>
+            `;
+            
+            container.appendChild(toast);
+            
+            // Animate in
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-10', 'opacity-0');
+            });
+            
+            // Auto remove if not loading
+            if (type !== 'loading') {
+                setTimeout(() => {
+                    hideToast(toast);
+                }, 4000);
+            }
+            
+            return toast;
+        }
+
+        function hideToast(element) {
+            if (!element) return;
+            element.classList.add('translate-y-10', 'opacity-0');
+            setTimeout(() => {
+                if (element.parentNode) element.parentNode.removeChild(element);
+            }, 300);
+        }
+
+        // Global Map State
+        let map;
+        let markers = {};
+        let weatherCache = {}; // Cache weather data by sourceId to avoid API spam
+        let isPredictionMode = false;
+        let mapGeocoder = null;
+        let mapSearchMarker = null;
+        let cameraSearchIndex = {};
+        let cameraSearchOptionsSignature = "";
+        let geocodeAbortController = null;
+        let geocodeCache = {};
+        
+        // Edit Mode State
+        let isEditMode = false;
+        let editAuth = null;
+
+        function toggleEditMode() {
+            if (isEditMode) {
+                // Lock Map
+                isEditMode = false;
+                editAuth = null;
+                document.getElementById('edit-map-icon').className = 'fas fa-lock';
+                document.getElementById('edit-map-btn').classList.remove('active');
+                
+                // Disable Dragging
+                Object.values(markers).forEach(m => {
+                    if (m.dragging) m.dragging.disable();
+                });
+                
+                alert("Map Layout Locked");
+            } else {
+                // Show Auth Modal
+                document.getElementById('authModal').classList.remove('hidden');
+                document.getElementById('authModal').classList.add('flex');
+                document.getElementById('auth-username').focus();
+            }
+        }
+        
+        function cancelEditAuth() {
+            document.getElementById('authModal').classList.add('hidden');
+            document.getElementById('authModal').classList.remove('flex');
+            document.getElementById('auth-username').value = '';
+            document.getElementById('auth-password').value = '';
+        }
+        
+        async function authenticateEdit() {
+            const u = document.getElementById('auth-username').value;
+            const p = document.getElementById('auth-password').value;
+            
+            if (!u || !p) return alert("Please enter credentials");
+            
+            const btn = document.querySelector('#authModal button[onclick="authenticateEdit()"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/verify_admin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: u, password: p })
+                });
+                const res = await response.json();
+                
+                if (res.status === 'success') {
+                    editAuth = { username: u, password: p };
+                    isEditMode = true;
+                    
+                    // UI Update
+                    document.getElementById('edit-map-icon').className = 'fas fa-lock-open';
+                    document.getElementById('edit-map-btn').classList.add('active');
+                    
+                    // Enable Dragging
+                    Object.values(markers).forEach(m => {
+                        if (m.dragging) m.dragging.enable();
+                    });
+                    
+                    cancelEditAuth(); // Close modal
+                    alert("Map Unlocked! You can now drag cameras to new locations.");
+                } else {
+                    alert("Authentication Failed: " + res.message);
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Server error during authentication");
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function exitPredictionMode() {
+            isPredictionMode = false;
+            document.getElementById('prediction-mode-indicator').classList.add('hidden');
+            
+            // Resume updates
+            fetchDashboardData();
+        }
+
+        // Helper: Fetch Weather
+        async function fetchWeather(lat, lng, sourceId) {
+            // Check cache (valid for 10 minutes)
+            const now = Date.now();
+            if (weatherCache[sourceId] && (now - weatherCache[sourceId].timestamp < 600000)) {
+                return weatherCache[sourceId].data;
+            }
+
+            try {
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.current_weather) {
+                    const weather = {
+                        temp: data.current_weather.temperature,
+                        code: data.current_weather.weathercode,
+                        wind: data.current_weather.windspeed
+                    };
+                    weatherCache[sourceId] = { timestamp: now, data: weather };
+                    return weather;
+                }
+            } catch (e) {
+                console.error("Weather fetch failed", e);
+            }
+            return null;
+        }
+
+        // Helper: Get Weather Icon/Desc
+        function getWeatherDisplay(code) {
+            // WMO Weather interpretation codes (WW)
+            // 0: Clear sky
+            // 1, 2, 3: Mainly clear, partly cloudy, and overcast
+            // 45, 48: Fog and depositing rime fog
+            // 51, 53, 55: Drizzle: Light, moderate, and dense intensity
+            // 61, 63, 65: Rain: Slight, moderate and heavy intensity
+            // 80, 81, 82: Rain showers: Slight, moderate, and violent
+            // 95, 96, 99: Thunderstorm: Slight or heavy
+            
+            let icon = "☁️";
+            let desc = "Cloudy";
+            
+            if (code === 0) { icon = "☀️"; desc = "Cerah"; }
+            else if (code <= 3) { icon = "⛅"; desc = "Berawan"; }
+            else if (code <= 48) { icon = "🌫️"; desc = "Berkabut"; }
+            else if (code <= 67) { icon = "🌧️"; desc = "Hujan"; }
+            else if (code <= 82) { icon = "🌦️"; desc = "Hujan Ringan"; }
+            else if (code >= 95) { icon = "⛈️"; desc = "Badai Petir"; }
+            
+            return { icon, desc };
+        }
+
+        function getWeatherHTML(sourceId) {
+            const cached = weatherCache[sourceId];
+            const now = Date.now();
+            
+            if (cached && (now - cached.timestamp < 600000)) {
+                const w = cached.data;
+                const { icon, desc } = getWeatherDisplay(w.code);
+                return `
+                    <div id="weather-${sourceId}" style="background:#f0f9ff; padding:6px; border-radius:6px; margin-bottom:8px; border:1px solid #bae6fd;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:20px;">${icon}</span>
+                            <div>
+                                <div style="font-weight:bold; font-size:12px;">${desc}</div>
+                                <div style="font-size:11px; color:#555;">${w.temp}°C | Wind: ${w.wind} km/h</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            return `
+                <div id="weather-${sourceId}" style="background:#f0f9ff; padding:6px; border-radius:6px; margin-bottom:8px; border:1px solid #bae6fd;">
+                    <div style="font-size:11px; color:#555;">Loading Weather...</div>
+                </div>
+            `;
+        }
+
+        // Init Map
+        async function initMap() {
+            // Center on Bandung
+            map = L.map('map').setView([-6.9175, 107.6191], 12);
+            mapGeocoder = (window.L && L.Control && L.Control.Geocoder && L.Control.Geocoder.nominatim)
+                ? L.Control.Geocoder.nominatim()
+                : null;
+            
+            // Standard Traffic/Street Tiles (OpenStreetMap)
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 19
+            }).addTo(map);
+
+            // Fetch Sources for coordinates
+            try {
+                const response = await fetch('/api/sources');
+                const sources = await response.json();
+                updateCameraSearchOptions(sources);
+                
+                sources.forEach(source => {
+                    if (source.lat && source.lng) {
+                        // Use a draggable Marker with a custom circular divIcon
+                        const dotSize = 20; // enlarged size
+                        const color = '#6366f1';
+                        const iconHtml = `<div style="width:${dotSize}px;height:${dotSize}px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.25)"></div>`;
+                        const marker = L.marker([parseFloat(source.lat), parseFloat(source.lng)], {
+                            draggable: false, // Default locked
+                            icon: L.divIcon({ className: '', html: iconHtml, iconSize: [dotSize, dotSize], iconAnchor: [dotSize/2, dotSize/2] })
+                        }).addTo(map);
+                        
+                        // Store lat/lng in marker options for later use
+                        marker.options.lat = parseFloat(source.lat);
+                        marker.options.lng = parseFloat(source.lng);
+                        marker.options.sourceId = source.id;
+
+                        marker.bindPopup(`<div style="color:black"><b>${source.name}</b><br>Loading stats...</div>`);
+                        
+                        // Fetch weather when popup opens
+                        marker.on('popupopen', async () => {
+                            // Trigger fetch if needed
+                            if (!weatherCache[source.id] || (Date.now() - weatherCache[source.id].timestamp >= 600000)) {
+                                await fetchWeather(source.lat, source.lng, source.id);
+                                // Update DOM immediately after fetch
+                                const weatherDiv = document.getElementById(`weather-${source.id}`);
+                                if (weatherDiv) {
+                                    weatherDiv.outerHTML = getWeatherHTML(source.id);
+                                }
+                            }
+                        });
+                        
+                        // Save new coordinates on drag end
+                        marker.on('dragend', async (e) => {
+                            if (!isEditMode || !editAuth) return; // Should not happen if draggable is false, but safe guard
+                            
+                            const ll = e.target.getLatLng();
+                            e.target.options.lat = ll.lat;
+                            e.target.options.lng = ll.lng;
+                            try {
+                                const response = await fetch('/api/edit_camera', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        id: source.id,
+                                        lat: ll.lat,
+                                        lng: ll.lng,
+                                        username: editAuth.username,
+                                        password: editAuth.password
+                                    })
+                                });
+                                const res = await response.json();
+                                if (res.status === 'success') {
+                                    e.target.bindPopup(`<div style="color:black"><b>${source.name}</b><br>Koordinat disimpan ✔️</div>`).openPopup();
+                                } else {
+                                    alert("Gagal menyimpan: " + res.message);
+                                    // Revert? For now just alert.
+                                }
+                            } catch (err) {
+                                console.error('Failed to save coordinates', err);
+                                alert("Gagal menghubungi server");
+                            }
+                        });
+
+                        markers[source.id] = marker;
+                    }
+                });
+            } catch (e) { console.error("Map init error", e); }
+
+            // Custom Context Menu for Routing
+            map.on('contextmenu', function(e) {
+                const existingMenu = document.querySelector('.custom-context-menu');
+                if (existingMenu) existingMenu.remove();
+
+                const menu = document.createElement('div');
+                menu.className = 'custom-context-menu';
+                
+                const containerPoint = map.latLngToContainerPoint(e.latlng);
+                menu.style.left = containerPoint.x + 'px';
+                menu.style.top = containerPoint.y + 'px';
+
+                // Option: Set Start Point
+                const startItem = document.createElement('div');
+                startItem.className = 'custom-context-menu-item';
+                startItem.innerHTML = '<i class="fas fa-map-marker-alt text-green-500 mr-2"></i> Set Titik Awal';
+                startItem.onclick = () => {
+                    setStartPoint(e.latlng);
+                    menu.remove();
+                };
+
+                // Option: Set End Point
+                const endItem = document.createElement('div');
+                endItem.className = 'custom-context-menu-item';
+                endItem.innerHTML = '<i class="fas fa-flag-checkered text-red-500 mr-2"></i> Set Titik Akhir';
+                endItem.onclick = () => {
+                    setEndPoint(e.latlng);
+                    menu.remove();
+                };
+                
+                // Divider
+                const divider = document.createElement('div');
+                divider.style.cssText = 'height:1px; background:#334155; margin:4px 0;';
+                
+                // Vehicle Type Selection
+                const vehicleItem = document.createElement('div');
+                vehicleItem.className = 'custom-context-menu-item';
+                const isCar = currentVehicleType !== 'bike';
+                vehicleItem.innerHTML = `<i class="fas ${isCar ? 'fa-car' : 'fa-motorcycle'} ${isCar ? 'text-blue-400' : 'text-yellow-400'} mr-2"></i> Mode: ${isCar ? 'Mobil (Tol/Raya)' : 'Motor (Non-Tol)'}`;
+                vehicleItem.onclick = (ev) => {
+                    ev.stopPropagation(); 
+                    toggleVehicleMode();
+                    menu.remove();
+                };
+
+                // Option: Clear Route
+                const clearItem = document.createElement('div');
+                clearItem.className = 'custom-context-menu-item';
+                clearItem.innerHTML = '<i class="fas fa-trash text-gray-400 mr-2"></i> Hapus Rute';
+                clearItem.onclick = () => {
+                    clearRoute();
+                    menu.remove();
+                };
+
+                menu.appendChild(startItem);
+                menu.appendChild(endItem);
+                menu.appendChild(divider);
+                menu.appendChild(vehicleItem);
+                
+                if (typeof manualStartPoint !== 'undefined' && (manualStartPoint || manualEndPoint || routingControl)) {
+                    menu.appendChild(clearItem);
+                }
+
+                map.getContainer().appendChild(menu);
+            });
+
+            map.on('click dragstart zoomstart', function() {
+                const existingMenu = document.querySelector('.custom-context-menu');
+                if (existingMenu) existingMenu.remove();
+            });
+        }
+
+        function updateCameraSearchOptions(sources) {
+            try {
+                const list = document.getElementById('camera-options');
+                if (!list || !Array.isArray(sources)) return;
+
+                const signature = sources.map(s => String(s.id || '')).sort().join('|');
+                if (signature === cameraSearchOptionsSignature) return;
+                cameraSearchOptionsSignature = signature;
+
+                list.innerHTML = '';
+                cameraSearchIndex = {};
+
+                sources.forEach(s => {
+                    const id = String(s.id || '').trim();
+                    const name = String(s.name || id).trim();
+                    if (!id) return;
+
+                    cameraSearchIndex[id.toLowerCase()] = id;
+                    if (name) cameraSearchIndex[name.toLowerCase()] = id;
+
+                    const opt = document.createElement('option');
+                    opt.value = name;
+                    list.appendChild(opt);
+                });
+            } catch (e) {}
+        }
+
+        async function geocodeLocation(query) {
+            const q = (query || "").trim();
+            if (!q) return null;
+            const key = q.toLowerCase();
+            const cached = geocodeCache[key];
+            if (cached && (Date.now() - cached.ts) < 10 * 60 * 1000) return cached.value;
+
+            if (geocodeAbortController) {
+                try { geocodeAbortController.abort(); } catch (e) {}
+            }
+            geocodeAbortController = new AbortController();
+
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1&countrycodes=id&addressdetails=0`;
+            const timeoutId = setTimeout(() => {
+                try { geocodeAbortController.abort(); } catch (e) {}
+            }, 8000);
+
+            try {
+                const res = await fetch(url, { signal: geocodeAbortController.signal, headers: { "Accept": "application/json" } });
+                if (!res.ok) return null;
+                const json = await res.json();
+                const first = Array.isArray(json) && json.length ? json[0] : null;
+                if (!first || !first.lat || !first.lon) return null;
+                const value = {
+                    lat: parseFloat(first.lat),
+                    lng: parseFloat(first.lon),
+                    name: first.display_name || q,
+                };
+                geocodeCache[key] = { ts: Date.now(), value };
+                return value;
+            } catch (e) {
+                return null;
+            } finally {
+                clearTimeout(timeoutId);
+            }
+        }
+
+        function setupMapSearch() {
+            const input = document.getElementById('map-search');
+            const clearBtn = document.getElementById('map-search-clear');
+            if (!input) return;
+
+            const clear = () => {
+                input.value = '';
+                if (mapSearchMarker && map) {
+                    try { map.removeLayer(mapSearchMarker); } catch (e) {}
+                    mapSearchMarker = null;
+                }
+                input.focus();
+            };
+
+            const focusCamera = (cameraId) => {
+                if (!map) return false;
+                const marker = markers[cameraId];
+                if (!marker) return false;
+                map.flyTo(marker.getLatLng(), Math.max(map.getZoom(), 15), { animate: true, duration: 0.8 });
+                try { marker.openPopup(); } catch (e) {}
+                return true;
+            };
+
+            const runSearch = async () => {
+                const raw = (input.value || '').trim();
+                if (!raw) return;
+                const key = raw.toLowerCase();
+
+                const direct = cameraSearchIndex[key];
+                if (direct && focusCamera(direct)) return;
+
+                const partial = Object.entries(cameraSearchIndex).find(([k]) => k.includes(key));
+                if (partial && focusCamera(partial[1])) return;
+
+                if (!map) return;
+
+                const loadingToast = showToast("Mencari lokasi...", "loading");
+                const result = await geocodeLocation(raw);
+                hideToast(loadingToast);
+
+                if (!result) {
+                    if (mapGeocoder) {
+                        const fallbackToast = showToast("Mencoba pencarian alternatif...", "loading");
+                        mapGeocoder.geocode(raw, (results) => {
+                            hideToast(fallbackToast);
+                            if (!results || !results.length) {
+                                showToast("Lokasi tidak ditemukan.", "error");
+                                return;
+                            }
+                            const r = results[0];
+                            const center = r.center;
+                            if (!center) {
+                                showToast("Lokasi tidak valid.", "error");
+                                return;
+                            }
+                            try {
+                                if (mapSearchMarker) map.removeLayer(mapSearchMarker);
+                            } catch (e) {}
+                            mapSearchMarker = L.marker(center).addTo(map);
+                            mapSearchMarker.bindPopup(`<div style="font-weight:700">${(r.name || raw)}</div>`).openPopup();
+                            map.flyTo(center, 14, { animate: true, duration: 0.8 });
+                        });
+                        return;
+                    }
+                    showToast("Lokasi tidak ditemukan / timeout. Coba kata kunci lebih spesifik.", "error");
+                    return;
+                }
+
+                const center = L.latLng(result.lat, result.lng);
+                try {
+                    if (mapSearchMarker) map.removeLayer(mapSearchMarker);
+                } catch (e) {}
+                mapSearchMarker = L.marker(center).addTo(map);
+                mapSearchMarker.bindPopup(`<div style="font-weight:700">${result.name}</div>`).openPopup();
+                map.flyTo(center, 14, { animate: true, duration: 0.8 });
+            };
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    runSearch();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    clear();
+                }
+            });
+
+            if (clearBtn) {
+                clearBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    clear();
+                });
+            }
+        }
+        
+        // Initialize Map
+        initMap();
+        setupMapSearch();
+
+        // Fetch Data
+        async function fetchDashboardData() {
+            if (isPredictionMode) return;
+            try {
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+                renderDashboard(data);
+            } catch (error) {
+                console.error("Error fetching stats:", error);
+            }
+        }
+
+        // Helper: update marker color (for divIcon-based markers)
+        function setMarkerColor(marker, color) {
+            const size = 20;
+            const html = `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.25)"></div>`;
+            marker.setIcon(L.divIcon({ className: '', html: html, iconSize: [size, size], iconAnchor: [size/2, size/2] }));
+        }
+
+        // Global helper for route selection
+        window.selectRoute = function(index) {
+            // Switch the colored overlay immediately for snappy feedback
+            try {
+                if (lastRouteAnalysis && lastRouteAnalysis.routes && lastRouteAnalysis.routes[index]) {
+                    selectedRouteIndex = index;
+                    lastRouteAnalysis.selectedIndex = index;
+                    renderRouteOverlay();
+                }
+            } catch (e) {}
+
+            // Try to click the corresponding itinerary container in the control panel
+            const alts = document.querySelectorAll('.leaflet-routing-alt');
+            if (alts && alts[index]) {
+                alts[index].click();
+                alts[index].style.backgroundColor = '#e0f2fe';
+                setTimeout(() => alts[index].style.backgroundColor = '', 1000);
+                return;
+            }
+
+            // Fallback: tell LRM directly via its API (works even when panel is hidden)
+            try {
+                if (routingControl && typeof routingControl.getRouter === 'function') {
+                    const router = routingControl;
+                    const plan = router.getPlan && router.getPlan();
+                    if (router._routes && router._routes[index]) {
+                        router._selectRoute && router._selectRoute({ route: router._routes[index], alternatives: router._routes });
+                        router.fire && router.fire('routeselected', { route: router._routes[index] });
+                        return;
+                    }
+                }
+            } catch (e) {}
+        };
+
+        function renderDashboard(data) {
+            // 1. Update Global Stats (Last 30 Days)
+            const stats = data.global_monthly || { accumulated_count: 0, cars: 0, motorcycles: 0 };
+            const total = Number(stats.accumulated_count || 0);
+            const cars = Number(stats.cars || 0);
+            const motors = Number(stats.motorcycles || 0);
+
+            document.getElementById('global-total').innerText = total.toLocaleString();
+            document.getElementById('global-cars').innerText = cars.toLocaleString();
+            document.getElementById('global-motors').innerText = motors.toLocaleString();
+
+            // Bars
+            const carPct = total > 0 ? (cars / total) * 100 : 0;
+            const motorPct = total > 0 ? (motors / total) * 100 : 0;
+
+            document.getElementById('bar-global-cars').style.width = `${carPct}%`;
+            document.getElementById('pct-global-cars').innerText = `${Math.round(carPct)}%`;
+            
+            document.getElementById('bar-global-motors').style.width = `${motorPct}%`;
+            document.getElementById('pct-global-motors').innerText = `${Math.round(motorPct)}%`;
+            
+            const totals30d = data.by_camera_30d || {};
+
+            // 1b. Update Map Markers
+            Object.keys(data.sources).forEach(sourceId => {
+                 if (markers[sourceId]) {
+                     const s = data.sources[sourceId];
+                     const m = totals30d[sourceId] || { accumulated_count: 0, cars: 0, motorcycles: 0 };
+                     
+                     // Use Current Count for Map Density to match Camera Cards
+                     let congestionStatus = "UNKNOWN";
+                     let congestionColor = "#94a3b8"; // Default Gray
+                     let trafficValue = s.current_count || 0;
+                     let isOffline = false; // (s.status === 'offline');
+                     
+                     // Check if stale data (older than 30s)
+                     const nowTs = Date.now() / 1000;
+                     // if (s.last_update && (nowTs - s.last_update > 30)) {
+                     //    isOffline = true;
+                     // }
+
+                     if (isOffline) {
+                         congestionStatus = "OFFLINE";
+                         congestionColor = "#64748b"; // Slate 500
+                     } else if (trafficValue <= 10) {
+                         congestionStatus = "LANCAR";
+                         congestionColor = "#22c55e"; // Green
+                     } else if (trafficValue <= 25) {
+                         congestionStatus = "PADAT LANCAR";
+                         congestionColor = "#eab308"; // Yellow
+                     } else if (trafficValue <= 45) {
+                         congestionStatus = "MACET";
+                         congestionColor = "#f97316"; // Orange
+                     } else {
+                         congestionStatus = "MACET TOTAL";
+                         congestionColor = "#ef4444"; // Red
+                     }
+                     
+                     // Update Marker Style (Color)
+                    setMarkerColor(markers[sourceId], congestionColor);
+
+                     // Store status for routing
+                     markers[sourceId].options.congestionStatus = congestionStatus;
+                     markers[sourceId].options.congestionLevel = trafficValue;
+                     
+                     // ... existing popup update ...
+                     markers[sourceId].setPopupContent(`
+                        <div style="color:#333; font-family:sans-serif; min-width:160px;">
+                            <div style="font-weight:bold; color:#4f46e5; margin-bottom:4px; font-size:14px;">${s.name}</div>
+                            
+                            <!-- Weather Section -->
+                            ${getWeatherHTML(sourceId)}
+
+                            <div style="margin-bottom:6px;">
+                                <span style="background-color:${congestionColor}; color:white; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold;">${congestionStatus}</span>
+                            </div>
+                            <div style="font-size:12px; line-height:1.4;">
+                                <div>Current Density: <b>${trafficValue}</b></div>
+                                <div style="font-size:11px; color:#555; margin-bottom:4px;">
+                                    <span>🚗 ${s.current_class_counts['0'] || 0}</span>
+                                    <span style="margin-left:8px;">🏍️ ${s.current_class_counts['1'] || 0}</span>
+                                </div>
+                                <div style="margin-top:4px; border-top:1px solid #eee; padding-top:4px;">
+                                    <div>30D Total: <b>${Number(m.accumulated_count || 0).toLocaleString()}</b></div>
+                                    <div style="display:flex; justify-content:space-between; font-size:11px; color:#555;">
+                                        <span>🚗 ${Number(m.cars || 0).toLocaleString()}</span>
+                                        <span>🏍️ ${Number(m.motorcycles || 0).toLocaleString()}</span>
+                                    </div>
+                                </div>
+                                <button onclick="getDirections(${s.lat || markers[sourceId].options.lat}, ${s.lng || markers[sourceId].options.lng})" style="margin-top:8px; width:100%; background-color:#4f46e5; color:white; border:none; padding:6px; border-radius:4px; cursor:pointer; font-size:12px; display:flex; align-items:center; justify-content:center; gap:4px;">
+                                    <i class="fas fa-directions"></i> Get Directions
+                                </button>
+                            </div>
+                        </div>
+                     `);
+                 }
+            });
+
+            // Trigger routing update if active (Real-time Re-routing based on congestion)
+            if (typeof routingControl !== 'undefined' && routingControl) {
+                 // Refresh per-segment gradient overlay using the latest CCTV
+                 // statuses without re-hitting the OSRM server.
+                 try { refreshRouteOverlayFromMarkers(); } catch (e) { console.warn(e); }
+            }
+
+            // 2. Render Camera Grid
+            const grid = document.getElementById('camera-grid');
+            grid.innerHTML = '';
+
+            // Use data.sources which is a dictionary {id: stats}
+            // We also need the list of cameras to get names and active status
+            // Wait, data.sources in api/stats contains the keys (ids) and values (stats)
+            // But we need the list of sources to know if they are "Active" in the monitor.
+            // Actually, we can fetch /api/sources to get names if they are not in stats, 
+            // but api/stats sources usually contains the name inside the stats object (see camera.py init)
+            
+            // Let's rely on data.sources
+            const sortedSourceIds = Object.keys(data.sources).sort();
+
+            // Update camera count chip
+            const chip = document.getElementById('camera-count-chip');
+            if (chip) chip.textContent = `${sortedSourceIds.length} kamera`;
+
+            if (sortedSourceIds.length === 0) {
+                grid.innerHTML = '<div class="col-span-full text-center text-gray-500 py-10">No cameras connected.</div>';
+                return;
+            }
+
+            sortedSourceIds.forEach(sourceId => {
+                const stats = data.sources[sourceId];
+                const isMonitorActive = (sourceId === data.active_source_id);
+                
+                const card = document.createElement('div');
+                const stateCls = isMonitorActive ? 'active' : '';
+                card.className = `cam-card ${stateCls}`;
+                
+                // Calculate percentages for this camera
+                const m = totals30d[sourceId] || { accumulated_count: 0, cars: 0, motorcycles: 0 };
+                const cTotal = Number(m.accumulated_count || 0);
+                const cCars = Number(m.cars || 0);
+                const cMotors = Number(m.motorcycles || 0);
+                
+                // Determine Status
+                let isOffline = false; // (stats.status === 'offline');
+                const nowTs = Date.now() / 1000;
+                // if (stats.last_update && (nowTs - stats.last_update > 30)) {
+                //     isOffline = true;
+                // }
+
+                if (isOffline) card.classList.add('offline');
+                
+                let statusHtml = `
+                    <div class="flex items-center gap-1.5">
+                        <span class="live-indicator"></span>
+                        <span class="text-[11px] text-emerald-400 font-medium">Live Processing</span>
+                    </div>
+                `;
+                
+                if (isOffline) {
+                     statusHtml = `
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-2 h-2 bg-red-500 rounded-full"></span>
+                            <span class="text-[11px] text-red-400 font-medium">Offline</span>
+                        </div>
+                    `;
+                }
+
+                const iconBg = isOffline
+                    ? 'background: rgba(239,68,68,0.12); color: #fca5a5; border-color: rgba(239,68,68,0.3);'
+                    : (isMonitorActive
+                        ? 'background: linear-gradient(135deg, rgba(59,130,246,0.25), rgba(139,92,246,0.2)); color: #fff; border-color: rgba(99,102,241,0.4);'
+                        : 'background: rgba(255,255,255,0.04); color: #94a3b8; border-color: rgba(255,255,255,0.08);');
+
+                card.innerHTML = `
+                    <div class="flex items-start gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center border flex-shrink-0" style="${iconBg}">
+                            <i class="fas fa-video${isOffline ? '-slash' : ''} text-sm"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <h3 class="text-white font-semibold text-sm truncate" title="${stats.name}">${stats.name}</h3>
+                            <div class="mt-1">${statusHtml}</div>
+                        </div>
+                        ${isMonitorActive ? '<span class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-300 border border-blue-500/30 flex-shrink-0">Active</span>' : ''}
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 mb-4">
+                        <div class="cam-metric">
+                            <div class="lbl">30D Total</div>
+                            <div class="val tabular-nums">${cTotal.toLocaleString()}</div>
+                        </div>
+                        <div class="cam-metric">
+                            <div class="lbl">Current</div>
+                            <div class="val accent tabular-nums">${stats.current_count || 0}</div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2.5 mb-4">
+                        <div>
+                            <div class="flex justify-between text-[11px] text-slate-400 mb-1">
+                                <span class="flex items-center gap-1.5"><i class="fas fa-car text-emerald-400/70 text-[10px]"></i>Cars</span>
+                                <span class="text-slate-300 font-medium tabular-nums">${cCars.toLocaleString()}</span>
+                            </div>
+                            <div class="w-full bg-slate-900/60 rounded-full h-1 overflow-hidden">
+                                <div class="h-1 rounded-full" style="width: ${cTotal ? (cCars/cTotal)*100 : 0}%; background: linear-gradient(90deg, #10b981, #34d399);"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-[11px] text-slate-400 mb-1">
+                                <span class="flex items-center gap-1.5"><i class="fas fa-motorcycle text-amber-400/70 text-[10px]"></i>Motorcycles</span>
+                                <span class="text-slate-300 font-medium tabular-nums">${cMotors.toLocaleString()}</span>
+                            </div>
+                            <div class="w-full bg-slate-900/60 rounded-full h-1 overflow-hidden">
+                                <div class="h-1 rounded-full" style="width: ${cTotal ? (cMotors/cTotal)*100 : 0}%; background: linear-gradient(90deg, #f59e0b, #fbbf24);"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <button onclick="switchToCamera('${sourceId}')" class="flex-1 bg-slate-800/60 hover:bg-blue-600 text-white py-2 rounded-lg text-xs font-semibold transition-all border border-white/5 hover:border-blue-400/50">
+                            <i class="fas fa-video mr-1.5"></i> Monitor
+                        </button>
+                        <button onclick="viewOnMap('${sourceId}')" class="flex-1 bg-slate-800/60 hover:bg-indigo-600 text-white py-2 rounded-lg text-xs font-semibold transition-all border border-white/5 hover:border-indigo-400/50 ${!markers[sourceId] ? 'opacity-40 cursor-not-allowed' : ''}" ${!markers[sourceId] ? 'disabled' : ''} title="${!markers[sourceId] ? 'No coordinates set' : 'View on Map'}">
+                            <i class="fas fa-map-marked-alt mr-1.5"></i> Map
+                        </button>
+                    </div>
+                `;
+                
+                grid.appendChild(card);
+            });
+        }
+
+        async function switchToCamera(id) {
+            // First switch source API
+            try {
+                await fetch('/api/switch_source', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: id })
+                });
+                // Then redirect to monitor
+                window.location.href = '/';
+            } catch (e) {
+                alert("Failed to switch camera");
+            }
+        }
+
+        function viewOnMap(sourceId) {
+            if (markers[sourceId]) {
+                const marker = markers[sourceId];
+                // Fly to location with zoom level 15
+                map.flyTo(marker.getLatLng(), 15, {
+                    animate: true,
+                    duration: 1.5
+                });
+                
+                // Open popup after a short delay to allow movement
+                setTimeout(() => {
+                    marker.openPopup();
+                }, 1500);
+
+                // Scroll to map
+                document.getElementById('map').scrollIntoView({behavior: 'smooth', block: 'center'});
+            } else {
+                alert("Location not set for this camera. Please edit camera details to add coordinates.");
+            }
+        }
+
+        let routingControl = null;
+        
+        // Manual Routing State
+        let manualStartPoint = null;
+        let manualEndPoint = null;
+        let manualStartMarker = null;
+        let manualEndMarker = null;
+
+        // Per-segment gradient route overlay state
+        let routeOverlayLayer = null;    // L.LayerGroup holding colored segments
+        let lastRouteAnalysis = null;    // { routes: [{ coords, segments: [...] }], bestIndex, selectedIndex }
+        let selectedRouteIndex = 0;
+
+        /**
+         * Convert a kmh speed to a color in a green->yellow->orange->red gradient.
+         * Thresholds are tuned for urban driving:
+         *   >= 28 km/h  => green  (lancar)
+         *   ~20 km/h    => yellow (padat-lancar)
+         *   ~12 km/h    => orange (padat)
+         *   <= 6 km/h   => red    (macet)
+         */
+        function speedToColor(kmh, baseSpeed) {
+            const base = Math.max(10, baseSpeed || 30);
+            // Normalize: 1.0 = base speed (lancar), 0 = standstill
+            const t = Math.max(0, Math.min(1, kmh / base));
+            // Piecewise gradient
+            // 0.0 -> #ef4444 (red)
+            // 0.33 -> #f59e0b (amber)
+            // 0.66 -> #eab308 (yellow)
+            // 1.0  -> #10b981 (emerald)
+            const stops = [
+                { t: 0.00, c: [239, 68, 68] },
+                { t: 0.35, c: [245, 158, 11] },
+                { t: 0.65, c: [234, 179, 8] },
+                { t: 1.00, c: [16, 185, 129] }
+            ];
+            let a = stops[0], b = stops[stops.length - 1];
+            for (let i = 0; i < stops.length - 1; i++) {
+                if (t >= stops[i].t && t <= stops[i+1].t) { a = stops[i]; b = stops[i+1]; break; }
+            }
+            const range = Math.max(0.0001, b.t - a.t);
+            const k = (t - a.t) / range;
+            const r = Math.round(a.c[0] + (b.c[0] - a.c[0]) * k);
+            const g = Math.round(a.c[1] + (b.c[1] - a.c[1]) * k);
+            const bl = Math.round(a.c[2] + (b.c[2] - a.c[2]) * k);
+            return `rgb(${r}, ${g}, ${bl})`;
+        }
+
+        /**
+         * Classify a speed into a human-readable status label + badge color.
+         */
+        function speedToStatus(kmh, baseSpeed) {
+            const base = Math.max(10, baseSpeed || 30);
+            const t = kmh / base;
+            if (t >= 0.85) return { label: 'Lancar', color: '#34d399' };
+            if (t >= 0.55) return { label: 'Padat Lancar', color: '#fbbf24' };
+            if (t >= 0.30) return { label: 'Padat', color: '#fb923c' };
+            return { label: 'Macet', color: '#ef4444' };
+        }
+
+        function formatMinutes(totalMinutes) {
+            if (!isFinite(totalMinutes) || totalMinutes < 0) totalMinutes = 0;
+            if (totalMinutes < 1) {
+                const sec = Math.max(0, Math.round(totalMinutes * 60));
+                return `${sec} dtk`;
+            }
+            const m = Math.round(totalMinutes);
+            if (m < 60) return `${m} mnt`;
+            const h = Math.floor(m / 60);
+            const rem = m % 60;
+            return rem > 0 ? `${h} jam ${rem} mnt` : `${h} jam`;
+        }
+
+        /**
+         * Compute per-segment analysis for a single route using the current
+         * congestion state of CCTV markers. Returns an array of segment objects.
+         */
+        function analyzeRouteSegments(coords, zones, baseSpeed, coverageM) {
+            const STATUS_SPEED = {
+                'LANCAR': currentVehicleType === 'bike' ? 40 : 32,
+                'PADAT LANCAR': currentVehicleType === 'bike' ? 30 : 24,
+                'MACET': currentVehicleType === 'bike' ? 15 : 12,
+                'MACET TOTAL': 5
+            };
+            const segments = [];
+            let totalSec = 0;
+            let totalLenM = 0;
+            for (let j = 0; j < coords.length - 1; j++) {
+                const a = L.latLng(coords[j]);
+                const b = L.latLng(coords[j+1]);
+                const segLenM = a.distanceTo(b);
+                if (segLenM < 0.5) continue; // skip noise
+                let segSpeedKmh = baseSpeed;
+                let hitZone = null;
+                let minDist = Infinity;
+                const mid = L.latLng((a.lat + b.lat)/2, (a.lng + b.lng)/2);
+                for (let z of zones) {
+                    const d = mid.distanceTo(z.latlng);
+                    if (d <= coverageM) {
+                        const zSpeed = STATUS_SPEED[z.status] || baseSpeed;
+                        if (zSpeed < segSpeedKmh) {
+                            segSpeedKmh = zSpeed;
+                        }
+                        if (d < minDist) { minDist = d; hitZone = z; }
+                    }
+                }
+                const segSpeedMps = (segSpeedKmh * 1000) / 3600;
+                const segSec = segLenM / Math.max(segSpeedMps, 0.1);
+                totalSec += segSec;
+                totalLenM += segLenM;
+                segments.push({
+                    a, b,
+                    lengthM: segLenM,
+                    speedKmh: segSpeedKmh,
+                    seconds: segSec,
+                    zone: hitZone ? { name: hitZone.name, status: hitZone.status } : null
+                });
+            }
+            return { segments, totalSec, totalLenM };
+        }
+
+        /**
+         * Bucket a speed into a discrete congestion class. Kept coarse on
+         * purpose so consecutive segments with near-identical speeds merge
+         * into one visual chunk instead of a pixel-level patchwork.
+         */
+        function speedBucket(kmh, baseSpeed) {
+            const base = Math.max(10, baseSpeed || 30);
+            const t = kmh / base;
+            if (t >= 0.85) return 'lancar';
+            if (t >= 0.55) return 'padat-lancar';
+            if (t >= 0.30) return 'padat';
+            return 'macet';
+        }
+
+        /**
+         * Pick a representative color + status label for a whole merged chunk.
+         * We use the weighted average speed of the chunk so a longer lancar
+         * stretch dominates a tiny padat sliver that leaked through.
+         */
+        function bucketToColor(bucket) {
+            switch (bucket) {
+                case 'lancar':        return '#10b981';
+                case 'padat-lancar':  return '#eab308';
+                case 'padat':         return '#f59e0b';
+                case 'macet':         return '#ef4444';
+                default:              return '#64748b';
+            }
+        }
+        function bucketToLabel(bucket) {
+            switch (bucket) {
+                case 'lancar':        return 'Lancar';
+                case 'padat-lancar':  return 'Padat Lancar';
+                case 'padat':         return 'Padat';
+                case 'macet':         return 'Macet';
+                default:              return 'Normal';
+            }
+        }
+
+        /**
+         * Draw per-segment colored polylines with hover tooltips for the
+         * currently selected route. Consecutive segments with the same
+         * congestion bucket are merged into a single polyline so the map
+         * stays readable even on long routes.
+         */
+        function renderRouteOverlay() {
+            if (!map) return;
+            if (routeOverlayLayer) {
+                try { map.removeLayer(routeOverlayLayer); } catch (e) {}
+                routeOverlayLayer = null;
+            }
+            if (!lastRouteAnalysis || !lastRouteAnalysis.routes || !lastRouteAnalysis.routes.length) return;
+
+            const idx = Math.min(selectedRouteIndex, lastRouteAnalysis.routes.length - 1);
+            const route = lastRouteAnalysis.routes[idx];
+            if (!route || !route.segments || !route.segments.length) return;
+
+            const baseSpeed = currentVehicleType === 'bike' ? 35 : 30;
+
+            // Dedicated high-z pane so the overlay always sits on top of the
+            // default Leaflet Routing Machine polyline and captures hovers.
+            if (!map.getPane('routeOverlayPane')) {
+                const pane = map.createPane('routeOverlayPane');
+                pane.style.zIndex = 650;
+                pane.style.pointerEvents = 'auto';
+            }
+
+            // Also fade out the LRM base line so our overlay is the only
+            // visible polyline — works regardless of whether `routeselected`
+            // fires (some routes don't trigger it).
+            try {
+                if (routingControl && routingControl._line) {
+                    routingControl._line.eachLayer(l => {
+                        try { l.setStyle({ opacity: 0 }); } catch (e) {}
+                    });
+                }
+            } catch (e) {}
+
+            // ---- 1) Tag each micro-segment with a coarse bucket ----
+            const tagged = route.segments.map(s => ({
+                seg: s,
+                bucket: speedBucket(s.speedKmh, baseSpeed)
+            }));
+
+            // ---- 2) Merge consecutive same-bucket segments into chunks ----
+            //        Also merge very short (<MIN_LEN) chunks into their neighbor
+            //        so tiny slivers of e.g. "padat" don't fragment a long "lancar".
+            const MIN_CHUNK_M = 180; // minimum visual chunk length in meters
+
+            const rawChunks = [];
+            for (const t of tagged) {
+                const last = rawChunks[rawChunks.length - 1];
+                if (last && last.bucket === t.bucket) {
+                    last.segments.push(t.seg);
+                    last.lengthM += t.seg.lengthM;
+                    last.seconds += t.seg.seconds;
+                    if (t.seg.zone && t.seg.zone.name) last.zones.add(t.seg.zone.name);
+                } else {
+                    rawChunks.push({
+                        bucket: t.bucket,
+                        segments: [t.seg],
+                        lengthM: t.seg.lengthM,
+                        seconds: t.seg.seconds,
+                        zones: new Set(t.seg.zone && t.seg.zone.name ? [t.seg.zone.name] : [])
+                    });
+                }
+            }
+
+            // Swallow tiny chunks into their neighbors (prefer the neighbor with
+            // the worse congestion, so a short macet sliver keeps red; otherwise
+            // prefer the longer side).
+            const mergedChunks = [];
+            for (let i = 0; i < rawChunks.length; i++) {
+                const c = rawChunks[i];
+                const isTiny = c.lengthM < MIN_CHUNK_M;
+                if (isTiny && (mergedChunks.length || i < rawChunks.length - 1)) {
+                    const prev = mergedChunks[mergedChunks.length - 1];
+                    const next = rawChunks[i + 1];
+                    const severity = { 'lancar': 0, 'padat-lancar': 1, 'padat': 2, 'macet': 3 };
+                    let target = prev;
+                    if (prev && next) {
+                        const pSev = severity[prev.bucket] || 0;
+                        const nSev = severity[next.bucket] || 0;
+                        target = pSev >= nSev ? prev : next;
+                    } else if (next && !prev) {
+                        target = next;
+                    }
+                    if (target === next) {
+                        // Merge forward: prepend to next
+                        next.segments = c.segments.concat(next.segments);
+                        next.lengthM += c.lengthM;
+                        next.seconds += c.seconds;
+                        c.zones.forEach(z => next.zones.add(z));
+                    } else if (target === prev) {
+                        prev.segments = prev.segments.concat(c.segments);
+                        prev.lengthM += c.lengthM;
+                        prev.seconds += c.seconds;
+                        c.zones.forEach(z => prev.zones.add(z));
+                    } else {
+                        mergedChunks.push(c);
+                    }
+                    continue;
+                }
+                // Also merge if same bucket as the previous merged chunk (can
+                // happen after swallowing creates two same-bucket neighbors).
+                const prev = mergedChunks[mergedChunks.length - 1];
+                if (prev && prev.bucket === c.bucket) {
+                    prev.segments = prev.segments.concat(c.segments);
+                    prev.lengthM += c.lengthM;
+                    prev.seconds += c.seconds;
+                    c.zones.forEach(z => prev.zones.add(z));
+                } else {
+                    mergedChunks.push(c);
+                }
+            }
+
+            // ---- 3) Compute cumulative time so each chunk can show "sisa ETA" ----
+            const totalSec = mergedChunks.reduce((s, c) => s + c.seconds, 0);
+
+            // ---- 4) Render one polyline per merged chunk ----
+            const group = L.layerGroup();
+            let cumSec = 0;
+
+            mergedChunks.forEach((chunk, i) => {
+                // Build the poly-line path from the first point of the first seg
+                // through all endpoints in the chunk.
+                const path = [chunk.segments[0].a];
+                for (const s of chunk.segments) path.push(s.b);
+
+                const color = bucketToColor(chunk.bucket);
+                const label = bucketToLabel(chunk.bucket);
+
+                // Shadow line for legibility on light tiles
+                const shadow = L.polyline(path, {
+                    pane: 'routeOverlayPane',
+                    color: '#000',
+                    opacity: 0.22,
+                    weight: 10,
+                    lineCap: 'round',
+                    lineJoin: 'round',
+                    interactive: false
+                });
+
+                // Main colored chunk (visual)
+                const line = L.polyline(path, {
+                    pane: 'routeOverlayPane',
+                    color,
+                    opacity: 0.95,
+                    weight: 6,
+                    lineCap: 'round',
+                    lineJoin: 'round',
+                    interactive: false
+                });
+
+                // Transparent wide hit-zone so hover is forgiving and always
+                // catches the cursor even on thin strokes.
+                const hit = L.polyline(path, {
+                    pane: 'routeOverlayPane',
+                    color: '#ffffff',
+                    opacity: 0,
+                    weight: 24,
+                    lineCap: 'round',
+                    lineJoin: 'round',
+                    interactive: true,
+                    bubblingMouseEvents: false
+                });
+
+                const chunkMinutes = chunk.seconds / 60;
+                const etaFromHereMin = (totalSec - cumSec) / 60;
+                cumSec += chunk.seconds;
+
+                const lenLabel = chunk.lengthM >= 1000
+                    ? `${(chunk.lengthM / 1000).toFixed(2)} km`
+                    : `${Math.round(chunk.lengthM)} m`;
+
+                // Weighted average speed for the chunk
+                const totalLenForAvg = chunk.segments.reduce((s, x) => s + x.lengthM, 0);
+                const avgSpeed = totalLenForAvg > 0
+                    ? chunk.segments.reduce((s, x) => s + x.speedKmh * x.lengthM, 0) / totalLenForAvg
+                    : chunk.segments[0].speedKmh;
+
+                const zoneNames = Array.from(chunk.zones).filter(Boolean);
+                const zoneHtml = zoneNames.length
+                    ? `<div style="color:#94a3b8;font-size:11px;margin-top:6px;line-height:1.4;"><i class="fas fa-video" style="margin-right:4px;opacity:0.8;"></i>${zoneNames.slice(0, 3).join(' · ')}${zoneNames.length > 3 ? ` +${zoneNames.length - 3}` : ''}</div>`
+                    : '';
+
+                const tooltip = `
+                    <div style="min-width:200px;font-family:Inter,sans-serif;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">
+                            <span style="font-weight:700;color:#f8fafc;font-size:12.5px;">Bagian ${i + 1} / ${mergedChunks.length}</span>
+                            <span style="font-weight:700;font-size:10px;padding:2px 7px;border-radius:9999px;background:${color}26;color:${color};border:1px solid ${color}66;">${label}</span>
+                        </div>
+                        <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:11.5px;color:#cbd5e1;line-height:1.5;">
+                            <span style="color:#64748b;">Jarak</span><span style="color:#e2e8f0;font-weight:600;">${lenLabel}</span>
+                            <span style="color:#64748b;">Estimasi</span><span style="color:#e2e8f0;font-weight:600;">${formatMinutes(chunkMinutes)}</span>
+                            <span style="color:#64748b;">Kecepatan</span><span style="color:#e2e8f0;font-weight:600;">${Math.round(avgSpeed)} km/jam</span>
+                            <span style="color:#64748b;">Sisa ETA</span><span style="color:#93c5fd;font-weight:700;">${formatMinutes(etaFromHereMin)}</span>
+                        </div>
+                        ${zoneHtml}
+                    </div>
+                `;
+
+                line.bindTooltip(tooltip, {
+                    sticky: true,
+                    direction: 'top',
+                    offset: [0, -6],
+                    className: 'route-seg-tooltip',
+                    opacity: 1
+                });
+                hit.bindTooltip(tooltip, {
+                    sticky: true,
+                    direction: 'top',
+                    offset: [0, -6],
+                    className: 'route-seg-tooltip',
+                    opacity: 1
+                });
+
+                hit.on('mouseover', function() { line.setStyle({ weight: 9, opacity: 1 }); });
+                hit.on('mouseout',  function() { line.setStyle({ weight: 6, opacity: 0.95 }); });
+
+                group.addLayer(shadow);
+                group.addLayer(line);
+                group.addLayer(hit);
+            });
+
+            group.addTo(map);
+            routeOverlayLayer = group;
+
+            // Bring overlay above the LRM line
+            try {
+                group.eachLayer(l => { if (l.bringToFront) l.bringToFront(); });
+            } catch (e) {}
+
+            const legend = document.getElementById('route-legend');
+            if (legend) legend.classList.remove('hidden');
+        }
+
+        /**
+         * Rebuild analysis for all routes from current marker statuses and
+         * refresh the overlay without re-hitting OSRM. Safe to call on every
+         * stats poll.
+         */
+        function refreshRouteOverlayFromMarkers() {
+            if (!lastRouteAnalysis || !lastRouteAnalysis._rawRoutes) return;
+            const baseSpeed = currentVehicleType === 'bike' ? 35 : 30;
+            const coverageM = 250;
+            const zones = [];
+            for (let id in markers) {
+                const status = markers[id].options.congestionStatus || 'LANCAR';
+                let zoneName = '';
+                try {
+                    const html = markers[id].getPopup().getContent();
+                    const m = String(html || '').match(/<b>(.*?)<\/b>/);
+                    zoneName = (m && m[1]) ? String(m[1]).trim() : '';
+                } catch (e) { zoneName = ''; }
+                if (!zoneName || zoneName.toLowerCase() === 'unknown area') zoneName = '';
+                zones.push({ latlng: markers[id].getLatLng(), status, name: zoneName });
+            }
+            lastRouteAnalysis.routes = lastRouteAnalysis._rawRoutes.map(rr => {
+                const r = analyzeRouteSegments(rr.coordinates, zones, baseSpeed, coverageM);
+                return { coords: rr.coordinates, segments: r.segments, totalSec: r.totalSec, totalLenM: r.totalLenM };
+            });
+            renderRouteOverlay();
+        }
+
+        let currentVehicleType = 'car'; // 'car' or 'bike'
+
+        function toggleVehicleMode() {
+            const isCar = (currentVehicleType === 'car');
+            currentVehicleType = isCar ? 'bike' : 'car';
+            updateVehicleModeUI();
+            
+            // Restart routing if active
+            let routed = false;
+            if (routingControl) {
+                const waypoints = routingControl.getWaypoints();
+                if (waypoints && waypoints.length >= 2) {
+                    const start = waypoints[0].latLng;
+                    const end = waypoints[waypoints.length - 1].latLng;
+                    if (start && end) {
+                        startRouting(start.lat, start.lng, end.lat, end.lng);
+                        routed = true;
+                    }
+                }
+            }
+            
+            if (!routed) {
+                if (manualStartPoint && manualEndPoint) {
+                     startRouting(manualStartPoint.lat, manualStartPoint.lng, manualEndPoint.lat, manualEndPoint.lng);
+                } else {
+                     const typeName = currentVehicleType === 'bike' ? 'Motor' : 'Mobil';
+                     showToast(`Mode kendaraan: ${typeName}`, 'success');
+                }
+            }
+        }
+
+        function updateVehicleModeUI() {
+            const btn = document.getElementById('vehicle-mode-btn');
+            const icon = document.getElementById('vehicle-mode-icon');
+            const text = document.getElementById('vehicle-mode-text');
+
+            if (currentVehicleType === 'car') {
+                icon.className = 'fas fa-car';
+                text.innerText = 'Mobil';
+                btn.style.color = '';
+            } else {
+                icon.className = 'fas fa-motorcycle';
+                text.innerText = 'Motor';
+                btn.style.color = '#fbbf24';
+            }
+        }
+
+        function startRouting(startLat, startLng, destLat, destLng, onComplete = null) {
+            if (routingControl) {
+                map.removeControl(routingControl);
+            }
+            // Remove any stale gradient overlay from a previous routing call
+            if (routeOverlayLayer) {
+                try { map.removeLayer(routeOverlayLayer); } catch (e) {}
+                routeOverlayLayer = null;
+            }
+
+            const loadingToast = showToast("Menghitung rute terbaik...", "loading");
+            
+            // Safety timeout to clear loading state if OSRM hangs
+            const safetyTimeout = setTimeout(() => {
+                hideToast(loadingToast);
+                showToast("Waktu permintaan habis (Rute). Silakan coba lagi.", "error");
+                
+                if (window.isRoutingInProgress) {
+                    window.isRoutingInProgress = false;
+                }
+                if (onComplete) onComplete();
+            }, 35000); // 35s (slightly longer than OSRM timeout)
+
+            try {
+                routingControl = L.Routing.control({
+                    waypoints: [
+                        L.latLng(startLat, startLng),
+                        L.latLng(destLat, destLng)
+                    ],
+                    router: L.Routing.osrmv1({
+                        serviceUrl: 'https://router.project-osrm.org/route/v1',
+                        profile: currentVehicleType === 'bike' ? 'bike' : 'car', // Use 'bike' as proxy for motorcycle (non-toll)
+                        timeout: 30000 // 30s timeout
+                    }),
+                    routeWhileDragging: true,
+                    geocoder: L.Control.Geocoder.nominatim(),
+                    showAlternatives: true,
+                    createMarker: function(i, wp, nWps) {
+                        let iconHtml, anchor;
+                        if (i === 0) {
+                            // Start: Blue "A"
+                            iconHtml = '<div style="background-color:#3b82f6; width:32px; height:32px; border-radius:50%; border:2px solid white; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; box-shadow:0 4px 6px rgba(0,0,0,0.3);">A</div>';
+                            anchor = [16, 16];
+                        } else if (i === nWps - 1) {
+                            // End: Red Flag
+                            iconHtml = '<div style="background-color:#ef4444; width:32px; height:32px; border-radius:50%; border:2px solid white; display:flex; align-items:center; justify-content:center; color:white; font-size:14px; box-shadow:0 4px 6px rgba(0,0,0,0.3);"><i class="fas fa-flag-checkered"></i></div>';
+                            anchor = [16, 16];
+                        } else {
+                            // Via: Yellow Dot
+                            iconHtml = '<div style="background-color:#eab308; width:16px; height:16px; border-radius:50%; border:2px solid white; box-shadow:0 2px 4px rgba(0,0,0,0.3);"></div>';
+                            anchor = [8, 8];
+                        }
+                        return L.marker(wp.latLng, {
+                            draggable: true,
+                            icon: L.divIcon({ className: '', html: iconHtml, iconSize: [32, 32], iconAnchor: anchor })
+                        });
+                    },
+                    lineOptions: {
+                        styles: [
+                            { color: '#0b1220', opacity: 0.18, weight: 10 },
+                            { color: '#ffffff', opacity: 0.35, weight: 4 }
+                        ],
+                        addWaypoints: false
+                    },
+                    altLineOptions: {
+                        styles: [
+                            {color: '#0b1220', opacity: 0.25, weight: 9},
+                            {color: '#64748b', opacity: 0.55, weight: 4, dashArray: '2,8'}
+                        ]
+                    }
+                })
+                .on('routesfound', function(e) {
+                      clearTimeout(safetyTimeout);
+                      hideToast(loadingToast);
+                      if (onComplete) onComplete();
+                      
+                      const routes = e.routes;
+                      const vehicleBadge = currentVehicleType === 'bike'
+                        ? '<span class="routing-badge bike">Motor</span>'
+                        : '<span class="routing-badge car">Mobil</span>';
+                      let comparisonHTML = `
+                        <div class="routing-alert-inner">
+                          <div class="routing-alert-header">
+                            <div class="routing-alert-title"><i class="fas fa-route" style="opacity:0.9; color:#93c5fd;"></i><span>Analisis Lalu Lintas</span></div>
+                            <div style="display:flex;align-items:center;gap:6px;">
+                              ${vehicleBadge}
+                              <button type="button" class="routing-alert-btn" onclick="(function(el){ const p=el.closest('#routing-alert'); p.classList.toggle('routing-alert-collapsed'); const i=el.querySelector('i'); if(p.classList.contains('routing-alert-collapsed')){ i.className='fas fa-chevron-down'; el.title='Perluas'; } else { i.className='fas fa-chevron-up'; el.title='Kecilkan'; } })(this)" title="Kecilkan" aria-label="Kecilkan">
+                                <i class="fas fa-chevron-up"></i>
+                              </button>
+                              <button type="button" class="routing-alert-close" onclick="this.closest('#routing-alert').remove()" aria-label="Tutup" title="Tutup">
+                                <i class="fas fa-times"></i>
+                              </button>
+                            </div>
+                          </div>
+                          <div class="routing-alert-scroll">
+                      `;
+                      let bestRouteIndex = 0;
+                      let minTotalTime = Infinity;
+
+                      const STATUS_SPEED = {
+                        'LANCAR': currentVehicleType === 'bike' ? 40 : 32, // Motor usually faster in traffic
+                        'PADAT LANCAR': currentVehicleType === 'bike' ? 30 : 24,
+                        'MACET': currentVehicleType === 'bike' ? 15 : 12,
+                        'MACET TOTAL': 5
+                      };
+                      const BASE_SPEED = currentVehicleType === 'bike' ? 35 : 30;
+                      const COVERAGE_M = 250;
+                      const zones = [];
+                      for (let id in markers) {
+                        const status = markers[id].options.congestionStatus || 'LANCAR';
+                        const speed = STATUS_SPEED[status] || BASE_SPEED;
+                        let zoneName = '';
+                        try {
+                          const html = markers[id].getPopup().getContent();
+                          const m = String(html || '').match(/<b>(.*?)<\/b>/);
+                          zoneName = (m && m[1]) ? String(m[1]).trim() : '';
+                        } catch (e) {
+                          zoneName = '';
+                        }
+                        if (!zoneName || zoneName.toLowerCase() === 'unknown area') zoneName = '';
+                        zones.push({
+                          latlng: markers[id].getLatLng(),
+                          speed,
+                          name: zoneName,
+                          status
+                        });
+                      }
+
+                      const formatTime = (minutes) => {
+                          if (minutes <= 60) return `${minutes} mnt`;
+                          const h = Math.floor(minutes / 60);
+                          const m = minutes % 60;
+                          return m > 0 ? `${h} jam ${m} mnt` : `${h} jam`;
+                      };
+ 
+                      routes.forEach((route, i) => {
+                          const coords = route.coordinates;
+                          let totalSeconds = 0;
+                          let affectedAreas = new Set();
+                          for (let j = 0; j < coords.length - 1; j++) {
+                              const a = L.latLng(coords[j]);
+                              const b = L.latLng(coords[j+1]);
+                              const segLenM = a.distanceTo(b);
+                              let segSpeedKmh = BASE_SPEED;
+                              for (let z of zones) {
+                                  const mid = L.latLng((a.lat + b.lat)/2, (a.lng + b.lng)/2);
+                                  if (mid.distanceTo(z.latlng) <= COVERAGE_M) {
+                                      segSpeedKmh = Math.min(segSpeedKmh, z.speed);
+                                      if (z.name) affectedAreas.add(z.name);
+                                  }
+                              }
+                              const segSpeedMps = (segSpeedKmh * 1000) / 3600;
+                              totalSeconds += segLenM / Math.max(segSpeedMps, 0.1);
+                          }
+                          const baseTimeMinutes = Math.round(route.summary.totalTime / 60);
+                          const totalTimeMinutes = Math.round(totalSeconds / 60);
+                          route.summary.totalTime = totalTimeMinutes * 60;
+                          const delayMinutes = Math.max(0, totalTimeMinutes - baseTimeMinutes);
+                          const isAffected = delayMinutes >= 3;
+                          const pill = isAffected ? '<span class="routing-route-pill bad">Terdampak</span>' : '<span class="routing-route-pill ok">Lancar</span>';
+                          route.isCongested = isAffected;
+                          const affectedNames = Array.from(affectedAreas).filter(Boolean);
+                          let zonesHtml = '';
+                          if (isAffected) {
+                            if (affectedNames.length) {
+                              zonesHtml = `<div class="routing-zones">${affectedNames.slice(0, 6).map(n => `<span class="routing-chip warn">${n}</span>`).join('')}</div>`;
+                            } else {
+                              zonesHtml = `<div class="routing-zones"><span class="routing-chip warn">Zona terdampak belum terdeteksi</span></div>`;
+                            }
+                          }
+                          const cardCls = isAffected ? 'routing-route-card warn' : 'routing-route-card';
+                          
+                          comparisonHTML += `
+                            <div class="${cardCls}" data-route-index="${i}">
+                              <div class="routing-route-top">
+                                <div class="routing-route-name">Rute ${i+1} ${i===0 ? '(Utama)' : '(Alternatif)'}</div>
+                                ${pill}
+                              </div>
+                              <div class="routing-metrics">
+                                <div>Estimasi normal: <strong>${formatTime(baseTimeMinutes)}</strong></div>
+                                ${isAffected ? `<div>Penyesuaian: <span class="routing-delay">+${delayMinutes} mnt</span></div>` : `<div>Penyesuaian: <strong>0 mnt</strong></div>`}
+                                <div class="routing-total">Total: ${formatTime(totalTimeMinutes)}</div>
+                              </div>
+                              ${zonesHtml}
+                            </div>
+                          `;
+
+                          if (totalTimeMinutes < minTotalTime) {
+                              minTotalTime = totalTimeMinutes;
+                              bestRouteIndex = i;
+                          }
+                      });
+
+                      // Recommendation
+                      if (minTotalTime !== Infinity) {
+                          comparisonHTML += `<div class="routing-footer">`;
+                          if (bestRouteIndex !== 0) {
+                              comparisonHTML += `
+                                <div style="font-weight:800;color:#e2e8f0;margin-bottom:8px;"><i class="fas fa-lightbulb" style="color:#fbbf24;margin-right:6px;"></i>Rekomendasi: pilih Rute ${bestRouteIndex+1} untuk hemat waktu.</div>
+                                <button class="routing-action" onclick="window.selectRoute(${bestRouteIndex})"><i class="fas fa-check-circle" style="margin-right:6px;"></i>Gunakan Rute ${bestRouteIndex+1}</button>
+                              `;
+                          } else {
+                              comparisonHTML += `
+                                <div style="font-weight:800;color:#e2e8f0;margin-bottom:8px;"><i class="fas fa-check" style="color:#93c5fd;margin-right:6px;"></i>Rute utama masih yang paling efisien.</div>
+                              `;
+                          }
+                          comparisonHTML += `<div class="routing-hint">Catatan: penyesuaian dihitung dari CCTV (radius ${COVERAGE_M}m). Kalau nama zona tidak muncul, berarti marker belum punya label lokasi.</div></div>`;
+                      }
+
+                      comparisonHTML += `</div></div>`;
+ 
+                      const existingAlert = document.getElementById('routing-alert');
+                      if (existingAlert) existingAlert.remove();
+ 
+                      const alertDiv = document.createElement('div');
+                      alertDiv.id = 'routing-alert';
+                      alertDiv.innerHTML = comparisonHTML;
+
+                      document.getElementById('map').parentElement.style.position = 'relative'; 
+                      document.getElementById('map').appendChild(alertDiv);
+                      const bestCard = alertDiv.querySelector(`.routing-route-card[data-route-index="${bestRouteIndex}"]`);
+                      if (bestCard) bestCard.classList.add('best');
+
+                      // Persist raw routes + per-segment analysis for live overlay updates
+                      const _baseSpeed = currentVehicleType === 'bike' ? 35 : 30;
+                      lastRouteAnalysis = {
+                          _rawRoutes: routes.map(r => ({ coordinates: r.coordinates.slice() })),
+                          routes: routes.map(r => {
+                              const a = analyzeRouteSegments(r.coordinates, zones, _baseSpeed, COVERAGE_M);
+                              return { coords: r.coordinates, segments: a.segments, totalSec: a.totalSec, totalLenM: a.totalLenM };
+                          }),
+                          bestIndex: bestRouteIndex,
+                          selectedIndex: 0
+                      };
+                      selectedRouteIndex = 0;
+                      renderRouteOverlay();
+                  })
+                  .on('routingerror', function(e) {
+                      clearTimeout(safetyTimeout);
+                      hideToast(loadingToast);
+                      if (onComplete) onComplete();
+                      console.error("Routing error:", e);
+                      showToast("Gagal mengambil rute. Server sibuk atau koneksi terputus.", "error");
+                  })
+                  .on('routeselected', function(e) {
+                       const route = e.route;
+                       // Figure out which alt index was selected and switch overlay
+                       try {
+                           if (lastRouteAnalysis && lastRouteAnalysis._rawRoutes) {
+                               const sel = e.route && e.route.coordinates && e.route.coordinates[0];
+                               let bestIdx = 0;
+                               if (sel) {
+                                   for (let i = 0; i < lastRouteAnalysis._rawRoutes.length; i++) {
+                                       const r0 = lastRouteAnalysis._rawRoutes[i].coordinates[0];
+                                       if (r0 && r0.lat === sel.lat && r0.lng === sel.lng) { bestIdx = i; break; }
+                                   }
+                                   // Fallback: match by full length (OSRM sometimes reuses first coord)
+                                   for (let i = 0; i < lastRouteAnalysis._rawRoutes.length; i++) {
+                                       if (lastRouteAnalysis._rawRoutes[i].coordinates.length === e.route.coordinates.length) { bestIdx = i; break; }
+                                   }
+                               }
+                               selectedRouteIndex = bestIdx;
+                               lastRouteAnalysis.selectedIndex = bestIdx;
+                               renderRouteOverlay();
+                           }
+                       } catch (err) { console.warn('route overlay switch failed', err); }
+
+                       // Dim the LRM base line; our overlay provides the color
+                       setTimeout(() => {
+                           const line = this._line;
+                           if (line) {
+                               line.eachLayer(l => {
+                                   try { l.setStyle({ opacity: 0.0 }); } catch (e) {}
+                               });
+                           }
+                       }, 50);
+                  })
+                  .addTo(map);
+
+             // Force update LRM container text
+             routingControl.on('routesfound', function(e) {
+                 setTimeout(() => {
+                     const containers = document.querySelectorAll('.leaflet-routing-alt h2, .leaflet-routing-info h2, .leaflet-routing-alt-time');
+                     containers.forEach(el => {
+                         if (el.innerText.includes('min')) {
+                             if (!el.innerText.includes('Traffic')) {
+                                  el.innerHTML += ' <span style="color:#ef4444; font-size:0.8em;">(inc. Traffic)</span>';
+                             }
+                         }
+                     });
+                 }, 500);
+             });
+
+            } catch (e) {
+                console.error("Routing setup failed:", e);
+            }
+        }
+
+        function getDirections(destLat, destLng) {
+            // Check if another routing is in progress
+            if (window.isRoutingInProgress) {
+                showToast("Sedang memproses permintaan sebelumnya...", "info");
+                return;
+            }
+            window.isRoutingInProgress = true;
+
+            const loadingToast = showToast("Mencari lokasi Anda... (Max 20dtk)", "loading");
+            
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(position => {
+                    hideToast(loadingToast);
+                    // Pass a callback to clear the flag when done
+                    startRouting(position.coords.latitude, position.coords.longitude, destLat, destLng, () => {
+                        window.isRoutingInProgress = false;
+                    });
+                }, (err) => {
+                    window.isRoutingInProgress = false;
+                    hideToast(loadingToast);
+                    console.error("Geolocation Error:", err);
+                    
+                    let msg = "Gagal mendapatkan lokasi.";
+                    let hint = "Pastikan GPS aktif.";
+                    
+                    if (err.code === 1) {
+                        msg = "Izin lokasi ditolak.";
+                        hint = "Izinkan akses lokasi di browser.";
+                    } else if (err.code === 2) {
+                        msg = "Lokasi tidak tersedia.";
+                        hint = "Coba lagi nanti atau gunakan WiFi.";
+                    } else if (err.code === 3) {
+                        msg = "Waktu permintaan habis.";
+                        hint = "Sinyal GPS lemah.";
+                    }
+                    
+                    showToast(`${msg} ${hint}`, "error");
+                    
+                    // Fallback suggestion
+                    setTimeout(() => {
+                         showToast("Tips: Klik kanan pada peta untuk 'Set Titik Awal' secara manual.", "info");
+                    }, 2000);
+                    
+                }, {
+                    timeout: 20000, // Increased to 20s
+                    enableHighAccuracy: true,
+                    maximumAge: 0
+                });
+            } else {
+                window.isRoutingInProgress = false;
+                hideToast(loadingToast);
+                showToast("Geolocation tidak didukung browser ini.", "error");
+            }
+        }
+
+        function setStartPoint(latlng) {
+            manualStartPoint = latlng;
+            if (manualStartMarker) map.removeLayer(manualStartMarker);
+            
+            if (routingControl) {
+                 map.removeControl(routingControl);
+                 routingControl = null;
+                 // Also clear end marker if we are restarting? 
+                 // No, user might want to keep end point.
+            }
+            
+            manualStartMarker = L.marker(latlng, {
+                icon: L.divIcon({
+                    className: '',
+                    html: '<div style="background-color:#10b981; width:24px; height:24px; border-radius:50%; border:2px solid white; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; box-shadow:0 4px 6px rgba(0,0,0,0.3);">A</div>',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                })
+            }).addTo(map);
+            
+            checkAndRoute();
+        }
+
+        function setEndPoint(latlng) {
+            manualEndPoint = latlng;
+            if (manualEndMarker) map.removeLayer(manualEndMarker);
+            
+            if (routingControl) {
+                 map.removeControl(routingControl);
+                 routingControl = null;
+            }
+
+            manualEndMarker = L.marker(latlng, {
+                icon: L.divIcon({
+                    className: '',
+                    html: '<div style="background-color:#ef4444; width:24px; height:24px; border-radius:50%; border:2px solid white; display:flex; align-items:center; justify-content:center; color:white; font-size:12px; box-shadow:0 4px 6px rgba(0,0,0,0.3);"><i class="fas fa-flag"></i></div>',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                })
+            }).addTo(map);
+            
+            checkAndRoute();
+        }
+
+        function checkAndRoute() {
+            if (manualStartPoint && manualEndPoint) {
+                if (manualStartMarker) map.removeLayer(manualStartMarker);
+                if (manualEndMarker) map.removeLayer(manualEndMarker);
+                manualStartMarker = null;
+                manualEndMarker = null;
+                
+                startRouting(manualStartPoint.lat, manualStartPoint.lng, manualEndPoint.lat, manualEndPoint.lng);
+                
+                manualStartPoint = null;
+                manualEndPoint = null;
+            }
+        }
+
+        function clearRoute() {
+            if (routingControl) {
+                map.removeControl(routingControl);
+                routingControl = null;
+            }
+            if (manualStartMarker) {
+                map.removeLayer(manualStartMarker);
+                manualStartMarker = null;
+            }
+            if (manualEndMarker) {
+                map.removeLayer(manualEndMarker);
+                manualEndMarker = null;
+            }
+            manualStartPoint = null;
+            manualEndPoint = null;
+
+            // Clear gradient overlay + cached analysis
+            if (routeOverlayLayer) {
+                try { map.removeLayer(routeOverlayLayer); } catch (e) {}
+                routeOverlayLayer = null;
+            }
+            lastRouteAnalysis = null;
+            selectedRouteIndex = 0;
+            const legend = document.getElementById('route-legend');
+            if (legend) legend.classList.add('hidden');
+
+            const alertDiv = document.getElementById('routing-alert');
+            if (alertDiv) alertDiv.remove();
+        }
+
+        // Poll every 10 seconds
+        window.dashboardInterval = setInterval(fetchDashboardData, 10000);
+        fetchDashboardData();
+
+    </script>
+
+    <!-- Predictive Analytics Modal -->
+    <div id="predictiveModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-[9999] backdrop-blur-sm transition-all duration-300 p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-lg shadow-2xl animate-scaleIn max-h-[90vh] overflow-y-auto custom-scrollbar">
+            
+            <div class="p-6 border-b border-slate-800 flex justify-between items-center">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <i class="fas fa-brain text-purple-500"></i> AI Traffic Prediction
+                </h2>
+                <button onclick="document.getElementById('predictiveModal').classList.add('hidden')" class="text-gray-400 hover:text-white transition-colors">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            
+            <div class="p-6 space-y-6">
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2 font-medium">Select Future Date & Time</label>
+                    <div class="relative">
+                        <input type="datetime-local" id="predictTime" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-colors [color-scheme:dark]">
+                        <i class="fas fa-calendar-alt absolute right-4 top-3.5 text-gray-500 cursor-pointer hover:text-white transition-colors" onclick="document.getElementById('predictTime').showPicker()"></i>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2"><i class="fas fa-info-circle mr-1"></i> Prediction is based on historical patterns (Day of Week + Hour).</p>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <button onclick="runPrediction('high_traffic')" class="bg-red-900/30 hover:bg-red-900/50 border border-red-800 text-red-300 py-2 rounded-lg text-xs font-bold transition-colors">
+                        <i class="fas fa-exclamation-triangle mr-1"></i> SIMULATE CONGESTION
+                    </button>
+                    <button onclick="runPrediction('low_traffic')" class="bg-green-900/30 hover:bg-green-900/50 border border-green-800 text-green-300 py-2 rounded-lg text-xs font-bold transition-colors">
+                        <i class="fas fa-car-side mr-1"></i> SIMULATE CLEAR FLOW
+                    </button>
+                </div>
+
+                <button onclick="runPrediction()" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-3 rounded-lg shadow-lg shadow-purple-500/20 transition-all transform hover:scale-[1.02]">
+                    <i class="fas fa-magic mr-2"></i> Generate Prediction
+                </button>
+                
+                <!-- Result Section -->
+                <div id="predictionResult" class="hidden pt-4 border-t border-slate-800 animate-fadeIn">
+                    <h3 class="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wider">Prediction Results per Location</h3>
+                    <div id="predictionList" class="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+                        <!-- JS will populate this -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auth Modal for Map Edit -->
+    <div id="authModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-[9999] backdrop-blur-sm p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-sm shadow-2xl animate-scaleIn">
+            <div class="p-5 border-b border-slate-800">
+                <h3 class="text-lg font-bold text-white"><i class="fas fa-user-shield mr-2 text-indigo-500"></i> Admin Access</h3>
+            </div>
+            <div class="p-5 space-y-4">
+                <div>
+                    <label class="block text-xs text-gray-400 uppercase mb-1">Username</label>
+                    <input type="text" id="auth-username" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 uppercase mb-1">Password</label>
+                    <input type="password" id="auth-password" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                </div>
+                <div class="flex gap-3 mt-4">
+                    <button onclick="cancelEditAuth()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white py-2 rounded transition-colors">Cancel</button>
+                    <button onclick="authenticateEdit()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded transition-colors font-bold">Unlock</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function _smarttrafficSetPredictInputs(inputVal) {
+            const v = String(inputVal || '').trim();
+            if (!v) return;
+            const predictTime = document.getElementById('predictTime');
+            if (predictTime) predictTime.value = v;
+            const quick = document.getElementById('quick-predict-time');
+            if (quick) quick.value = v;
+        }
+
+        function _smarttrafficSetPredictTimeFromLocal(rawLocal) {
+            const raw = String(rawLocal || '').trim();
+            if (!raw) return null;
+            const inputVal = (raw.includes('T') ? raw : raw.replace(' ', 'T')).slice(0, 16);
+            _smarttrafficSetPredictInputs(inputVal);
+            return inputVal;
+        }
+
+        function _smarttrafficDefaultTomorrowInput() {
+            const now = new Date();
+            now.setDate(now.getDate() + 1);
+            now.setSeconds(0, 0);
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            const inputVal = now.toISOString().slice(0, 16);
+            _smarttrafficSetPredictInputs(inputVal);
+            return inputVal;
+        }
+
+        window.smarttrafficDashboardPredict = (action) => {
+            const a = (action && typeof action === 'object') ? action : {};
+            const raw = String(a.target_time_local || a.target_time || '').trim();
+            const scenario = Object.prototype.hasOwnProperty.call(a, 'scenario') ? a.scenario : null;
+            if (raw) _smarttrafficSetPredictTimeFromLocal(raw);
+            if (typeof runPrediction === 'function') {
+                try { runPrediction(scenario); } catch {}
+            }
+        };
+
+        function showPredictiveModal() {
+            document.getElementById('predictiveModal').classList.remove('hidden');
+            document.getElementById('predictiveModal').classList.add('flex');
+            
+            _smarttrafficDefaultTomorrowInput();
+            
+            document.getElementById('predictionResult').classList.add('hidden');
+            requestAnimationFrame(() => {
+                try { runPrediction(); } catch {}
+            });
+        }
+        
+        function updatePredictionTime(val) {
+            if (!val) return;
+            _smarttrafficSetPredictInputs(val);
+            runPrediction();
+        }
+
+        // Network Lines Functions Removed
+
+        async function runPrediction(scenario = null) {
+            const timeVal = document.getElementById('predictTime').value;
+            if (!timeVal) return alert("Please select a date and time");
+            
+            // Format YYYY-MM-DD HH:MM -> YYYY-MM-DD HH:MM
+            const formattedTime = timeVal.replace('T', ' ');
+            
+            const btn = document.querySelector('button[onclick="runPrediction()"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+            btn.disabled = true;
+            
+            // Indicator Loading State
+            const indicatorTime = document.getElementById('prediction-time-display');
+            const originalIndicatorText = indicatorTime.innerText;
+            const wasPredictionMode = isPredictionMode;
+            isPredictionMode = true;
+            indicatorTime.innerHTML = '<i class="fas fa-sync fa-spin text-purple-400"></i>';
+            
+            try {
+                const response = await fetch('/api/predict_traffic', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        target_time: formattedTime,
+                        force_scenario: scenario
+                    })
+                });
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const list = document.getElementById('predictionList');
+                    list.innerHTML = '';
+                    
+                    if (data.predictions && data.predictions.length > 0) {
+                        data.predictions.forEach(pred => {
+                            const item = `
+                                <div class="bg-slate-800/50 rounded-lg p-4 border border-slate-700 hover:bg-slate-800 transition-colors">
+                                    <div class="flex justify-between items-center mb-3">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-slate-400">
+                                                <i class="fas fa-video"></i>
+                                            </div>
+                                            <div>
+                                                <p class="font-medium text-white text-sm">${pred.camera_name}</p>
+                                                <p class="text-xs text-gray-500">${pred.vehicle_count} vehicles/hr</p>
+                                            </div>
+                                        </div>
+                                        <div class="text-right">
+                                            <p class="font-bold ${pred.status_color} text-sm">${pred.traffic_status}</p>
+                                            <div class="flex items-center justify-end gap-1 mt-1">
+                                                <div class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                                                <p class="text-[10px] text-gray-500">High Confidence</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Recommendation / Decision Section -->
+                                    <div class="bg-slate-900/50 rounded p-3 border border-slate-700/50 flex gap-3 items-start">
+                                        <div class="mt-0.5 text-indigo-400">
+                                            <i class="${pred.action_icon}"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-[10px] text-gray-400 uppercase font-semibold mb-0.5"><i class="fas fa-robot mr-1"></i>AI Decision Support</p>
+                                            <p class="text-xs text-gray-300 leading-relaxed">${pred.recommendation}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                            list.innerHTML += item;
+                        });
+                    } else {
+                         list.innerHTML = '<p class="text-center text-gray-500 py-4">No prediction data available</p>';
+                    }
+                    
+                    document.getElementById('predictionResult').classList.remove('hidden');
+
+                    // Switch to Map View
+                    isPredictionMode = true;
+                    
+                    let maxSeverity = -1;
+                    let worstCamId = null;
+                    let worstCamName = null;
+                    const severityMap = {
+                        'MACET TOTAL': 3,
+                        'MACET': 2,
+                        'PADAT LANCAR': 1,
+                        'LANCAR': 0
+                    };
+
+                    if (data.predictions && data.predictions.length > 0) {
+                        data.predictions.forEach(pred => {
+                            if (markers[pred.camera_id]) {
+                                const marker = markers[pred.camera_id];
+                                let color = '#22c55e';
+                                if (pred.traffic_status === 'MACET TOTAL') color = '#ef4444'; // Red
+                                else if (pred.traffic_status === 'MACET') color = '#f97316'; // Orange
+                                else if (pred.traffic_status === 'PADAT LANCAR') color = '#eab308'; // Yellow
+                                
+                                setMarkerColor(marker, color);
+                                
+                                // Update Marker Options for Smart Routing (Decision Support)
+                                marker.options.congestionStatus = pred.traffic_status;
+                                marker.options.congestionLevel = pred.vehicle_count;
+
+                                marker.setPopupContent(`
+                                    <div style="color:#333; font-family:sans-serif; min-width:180px;">
+                                        <div style="background:${color}; color:white; padding:4px 8px; border-radius:4px 4px 0 0; font-weight:bold; font-size:12px; display:flex; justify-content:space-between; align-items:center;">
+                                            <span><i class="fas fa-magic mr-1"></i> PREDICTION</span>
+                                            <span>${pred.vehicle_count} v/h</span>
+                                        </div>
+                                        <div style="padding:8px;">
+                                            <div style="font-weight:bold; color:#4f46e5; margin-bottom:4px; font-size:14px;">${pred.camera_name}</div>
+                                            <div style="font-size:11px; color:#555; margin-bottom:6px;">
+                                                Status: <b style="color:${color}">${pred.traffic_status}</b>
+                                            </div>
+                                            <div style="background:#f1f5f9; padding:6px; border-radius:4px; border-left:3px solid #6366f1;">
+                                                <div style="font-size:10px; color:#64748b; font-weight:bold; margin-bottom:2px;">AI RECOMMENDATION</div>
+                                                <div style="font-size:11px; line-height:1.3; color:#334155;">${pred.recommendation}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `);
+                                
+                                // Check for worst traffic
+                                const currentSeverity = severityMap[pred.traffic_status] || 0;
+                                if (currentSeverity > maxSeverity) {
+                                    maxSeverity = currentSeverity;
+                                    worstCamId = pred.camera_id;
+                                    worstCamName = pred.camera_name;
+                                }
+                            }
+                        });
+                    }
+
+                    // Network lines removed
+
+                    document.getElementById('prediction-time-display').innerText = formattedTime;
+                    document.getElementById('prediction-mode-indicator').classList.remove('hidden');
+                    
+                    // Close modal
+                    document.getElementById('predictiveModal').classList.add('hidden');
+                    document.getElementById('predictiveModal').classList.remove('flex');
+                    
+                    // We don't need to scroll to map if we used fitBounds in drawNetworkLines
+                    // document.getElementById('map').scrollIntoView({behavior: 'smooth', block: 'center'});
+
+                    // Open popup for the most critical area without over-zooming
+                    if (worstCamId && markers[worstCamId]) {
+                        setTimeout(() => {
+                            // Just open the popup, let the fitBounds from drawNetworkLines handle the view
+                            // Or optionally pan to it if we want to center it but keep the zoom
+                            // map.panTo(markers[worstCamId].getLatLng()); 
+                            markers[worstCamId].openPopup();
+                            
+                            showToast(`Lokasi Terpadat: ${worstCamName || worstCamId}`, 'error');
+                        }, 1000);
+                    }
+
+                } else {
+                    alert('Error: ' + data.message);
+                    isPredictionMode = wasPredictionMode;
+                    indicatorTime.innerText = originalIndicatorText;
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Connection failed');
+                isPredictionMode = wasPredictionMode;
+                indicatorTime.innerText = originalIndicatorText;
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+    </script>
+
+    <!-- Data Lake Modal -->
+    <div id="datalakeModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-[9999] backdrop-blur-sm transition-all duration-300">
+        <div class="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-2xl mx-4 shadow-2xl flex flex-col max-h-[85vh] animate-scaleIn">
+            
+            <!-- Fixed Header -->
+            <div class="p-5 border-b border-slate-800 shrink-0 bg-slate-900 rounded-t-xl">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center">
+                            <i class="fas fa-server text-indigo-400"></i>
+                        </div>
+                        Historical Analytics
+                    </h2>
+                    <button onclick="document.getElementById('datalakeModal').classList.add('hidden')" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-gray-400 hover:text-white flex items-center justify-center transition-all">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div class="flex flex-col md:flex-row md:items-end gap-3">
+                    <div class="flex-1">
+                        <label class="block text-xs text-gray-400 mb-1.5 font-medium ml-1">SELECT PARTITION DATE</label>
+                        <input type="date" id="historyDate" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white w-full text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors shadow-inner">
+                    </div>
+                    <button onclick="fetchDataLakeStats()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-lg text-sm font-semibold transition-all shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 h-[38px] flex items-center justify-center gap-2">
+                        <i class="fas fa-search"></i> Analyze
+                    </button>
+                </div>
+            </div>
+
+            <!-- Scrollable Content -->
+            <div id="datalakeContent" class="p-5 overflow-y-auto flex-1 custom-scrollbar bg-slate-900/50">
+                <div class="flex flex-col items-center justify-center h-full text-gray-500 py-10">
+                    <div class="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mb-4">
+                        <i class="fas fa-calendar-day text-2xl text-slate-600"></i>
+                    </div>
+                    <p class="text-sm font-medium">Select a date to view historical insights</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data Lake Logic
+        function showDataLakeStats() {
+            document.getElementById('datalakeModal').classList.remove('hidden');
+            document.getElementById('datalakeModal').classList.add('flex');
+            // Set today's date
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('historyDate').value = today;
+        }
+
+        async function fetchDataLakeStats() {
+            const date = document.getElementById('historyDate').value;
+            const container = document.getElementById('datalakeContent');
+            
+            container.innerHTML = '<div class="text-center text-indigo-400 py-8"><i class="fas fa-circle-notch fa-spin text-2xl"></i><br>Querying Data Lake...</div>';
+            
+            try {
+                const res = await fetch(`/api/datalake/stats?date=${date}`);
+                const data = await res.json();
+                
+                if (data.error) {
+                    container.innerHTML = `<div class="text-center text-red-400 py-8"><i class="fas fa-exclamation-triangle mb-2"></i><br>${data.message || data.error}</div>`;
+                    return;
+                }
+                
+                let html = `
+                    <div class="grid grid-cols-3 gap-3 mb-6">
+                        <div class="bg-slate-800/50 p-3 rounded-lg text-center border border-slate-700/50">
+                            <div class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Total Vehicles</div>
+                            <div class="text-xl font-bold text-white mt-1">${data.total_vehicles.toLocaleString()}</div>
+                        </div>
+                        <div class="bg-slate-800/50 p-3 rounded-lg text-center border border-slate-700/50">
+                            <div class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Active Cameras</div>
+                            <div class="text-xl font-bold text-indigo-400 mt-1">${Object.keys(data.by_camera).length}</div>
+                        </div>
+                        <div class="bg-slate-800/50 p-3 rounded-lg text-center border border-slate-700/50">
+                            <div class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Date</div>
+                            <div class="text-lg font-bold text-gray-200 mt-1">${data.date}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-sm font-semibold text-gray-300 flex items-center gap-2">
+                            <i class="fas fa-list-ul text-slate-500"></i> Breakdown by Source
+                        </h3>
+                        <span class="text-[10px] text-gray-500 bg-slate-800/80 px-2 py-1 rounded border border-slate-700/50">Sorted by Volume</span>
+                    </div>
+
+                    <div class="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden shadow-inner">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left text-gray-400">
+                                <thead class="text-xs text-gray-300 uppercase bg-slate-900 sticky top-0 z-10 shadow-sm">
+                                    <tr>
+                                        <th class="px-4 py-2.5 bg-slate-900 font-semibold tracking-wide">Camera Location</th>
+                                        <th class="px-4 py-2.5 text-right bg-slate-900 font-semibold tracking-wide">Cars</th>
+                                        <th class="px-4 py-2.5 text-right bg-slate-900 font-semibold tracking-wide">Motorcycles</th>
+                                        <th class="px-4 py-2.5 text-right bg-slate-900 font-semibold tracking-wide">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-700/50">
+                `;
+                
+                // Sort by total volume desc
+                const sortedEntries = Object.entries(data.by_camera).sort((a, b) => b[1].total - a[1].total);
+
+                for (const [name, stats] of sortedEntries) {
+                    html += `
+                        <tr class="hover:bg-slate-700/30 transition-colors group">
+                            <td class="px-4 py-2 font-medium text-white group-hover:text-indigo-300 transition-colors truncate max-w-[200px]" title="${name}">
+                                ${name}
+                            </td>
+                            <td class="px-4 py-2 text-right text-gray-300">${stats.car.toLocaleString()}</td>
+                            <td class="px-4 py-2 text-right text-gray-300">${stats.motorcycle.toLocaleString()}</td>
+                            <td class="px-4 py-2 text-right font-bold text-white bg-slate-800/30">${stats.total.toLocaleString()}</td>
+                        </tr>
+                    `;
+                }
+                
+                html += `</tbody></table></div></div>`;
+                
+                container.innerHTML = html;
+                
+            } catch (e) {
+                container.innerHTML = `<div class="text-center text-red-400 py-8">Failed to fetch data.</div>`;
+            }
+        }
+    </script>
+
+    <!-- Footer Watermark -->
+    <footer class="fixed bottom-4 right-6 z-40 opacity-50 hover:opacity-100 transition-opacity">
+        <a href="https://avicenafahmi.com" target="_blank" class="text-xs font-mono text-slate-500 hover:text-blue-400 flex items-center gap-2">
+            <span>&copy; avicenafahmi.com</span>
+        </a>
+    </footer>
+{% endblock %}

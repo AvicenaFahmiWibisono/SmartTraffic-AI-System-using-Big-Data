@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="{% block html_lang %}id{% endblock %}" class="{% block html_class %}scroll-smooth{% endblock %}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SmartTraffic AI{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        slate: {
+                            850: '#151e2e',
+                            900: '#0f172a',
+                            950: '#020617',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    {% block head_extra %}{% endblock %}
+    <style>
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        body {
+            background-color: #0b1220;
+            background-image: radial-gradient(1000px circle at 10% 10%, rgba(56, 189, 248, 0.10), transparent 55%),
+                              radial-gradient(900px circle at 95% 15%, rgba(99, 102, 241, 0.10), transparent 55%),
+                              radial-gradient(900px circle at 80% 90%, rgba(16, 185, 129, 0.07), transparent 55%);
+            color: #e2e8f0;
+            font-family: 'Inter', sans-serif;
+        }
+        .glass-sidebar {
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.86), rgba(2, 6, 23, 0.78));
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 1.25rem;
+            box-shadow: 0 18px 45px -28px rgba(0, 0, 0, 0.85);
+        }
+        .glass-header { background: rgba(2, 6, 23, 0.55); backdrop-filter: blur(14px); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 1.1rem; }
+        .glass-panel { background: rgba(15, 23, 42, 0.58); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 1.25rem; box-shadow: 0 18px 45px -28px rgba(0, 0, 0, 0.85); }
+        .input-surface { background: rgba(2, 6, 23, 0.55); border: 1px solid rgba(255,255,255,0.10); }
+        .input-surface:focus { outline: none; border-color: rgba(56,189,248,0.45); box-shadow: 0 0 0 3px rgba(56,189,248,0.12); }
+        .nav-link { display: flex; align-items: center; gap: 0.75rem; padding: 0.7rem 0.85rem; color: #94a3b8; border-radius: 0.9rem; transition: all 0.18s ease; font-size: 0.95rem; text-decoration: none; border: 1px solid transparent; }
+        .nav-link:hover { color: #fff; background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.06); }
+        .nav-link.active { color: #e0f2fe; background: linear-gradient(135deg, rgba(56, 189, 248, 0.22), rgba(56, 189, 248, 0.05)); border-color: rgba(56, 189, 248, 0.22); font-weight: 700; }
+        .nav-link.disabled { opacity: 0.55; cursor: not-allowed; }
+        .nav-link.disabled:hover { background: transparent; border-color: transparent; color: #94a3b8; }
+        .nav-section { text-transform: uppercase; font-size: 0.72rem; font-weight: 800; color: #64748b; margin-top: 1.1rem; margin-bottom: 0.55rem; padding-left: 0.25rem; letter-spacing: 0.08em; }
+        .hud-grid { background-image: linear-gradient(rgba(56, 189, 248, 0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(56, 189, 248, 0.07) 1px, transparent 1px); background-size: 56px 56px; }
+        body.sidebar-collapsed #sidebar { width: 5.25rem !important; }
+        body.sidebar-collapsed #sidebar .sidebar-text { display: none !important; }
+        body.sidebar-collapsed #sidebar .nav-section { display: none !important; }
+        body.sidebar-collapsed #sidebar .sidebar-actions { display: none !important; }
+        body.sidebar-collapsed #sidebar .sidebar-extra { display: none !important; }
+        body.sidebar-collapsed #sidebar .nav-link { justify-content: center; gap: 0; padding-left: 0.8rem; padding-right: 0.8rem; }
+        body.sidebar-collapsed #sidebar .nav-link i { width: auto !important; }
+
+        @keyframes chatbot-float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+        @keyframes chatbot-wiggle {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(-7deg); }
+            75% { transform: rotate(7deg); }
+        }
+        @keyframes chatbot-ping {
+            0% { transform: scale(1); opacity: 0.55; }
+            100% { transform: scale(1.8); opacity: 0; }
+        }
+        .chatbot-fab {
+            width: 3.5rem;
+            height: 3.5rem;
+            border-radius: 9999px;
+            background: linear-gradient(135deg, #0ea5e9, #6366f1);
+            border: 2px solid rgba(255,255,255,0.15);
+            box-shadow: 0 12px 40px -12px rgba(99, 102, 241, 0.55), 0 4px 12px -4px rgba(0,0,0,0.4);
+            color: #fff;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .chatbot-fab:hover { transform: scale(1.08); box-shadow: 0 16px 50px -12px rgba(99, 102, 241, 0.65), 0 6px 16px -4px rgba(0,0,0,0.5); }
+        .chatbot-fab.chatbot-idle { animation: chatbot-float 2.8s ease-in-out infinite; }
+        .chatbot-fab.chatbot-idle i { animation: chatbot-wiggle 2.4s ease-in-out infinite; transform-origin: 50% 60%; }
+        .chatbot-fab.chatbot-idle::after {
+            content: "";
+            position: absolute;
+            inset: -8px;
+            border-radius: 9999px;
+            border: 1.5px solid rgba(99, 102, 241, 0.4);
+            animation: chatbot-ping 2s ease-out infinite;
+            pointer-events: none;
+        }
+        .chatbot-panel {
+            width: min(400px, calc(100vw - 2rem));
+            max-height: min(580px, calc(100vh - 7rem));
+            display: flex;
+            flex-direction: column;
+            border-radius: 1.25rem;
+            overflow: hidden;
+            background: linear-gradient(180deg, rgba(8, 12, 28, 0.96), rgba(15, 23, 42, 0.98));
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 30px 70px -20px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.04);
+            backdrop-filter: blur(20px) saturate(130%);
+        }
+        .chatbot-header {
+            padding: 0.85rem 1rem;
+            display: flex; align-items: center; gap: 0.75rem;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            background: rgba(2, 6, 23, 0.4);
+            flex-shrink: 0;
+        }
+        .chatbot-header .avatar {
+            width: 38px; height: 38px; border-radius: 0.75rem;
+            background: linear-gradient(135deg, #0ea5e9, #6366f1);
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 1rem;
+            border: 1px solid rgba(255,255,255,0.15);
+            flex-shrink: 0;
+        }
+        .chatbot-header .info { flex: 1; min-width: 0; }
+        .chatbot-header .info .name { font-size: 0.85rem; font-weight: 700; color: #f8fafc; }
+        .chatbot-header .info .status { font-size: 0.68rem; color: #64748b; display: flex; align-items: center; gap: 0.4rem; margin-top: 0.15rem; }
+        .chatbot-header .close-btn {
+            width: 32px; height: 32px; border-radius: 0.6rem;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+            color: #94a3b8; cursor: pointer; transition: all 0.15s;
+        }
+        .chatbot-header .close-btn:hover { color: #fff; background: rgba(255,255,255,0.08); }
+
+        .chatbot-messages {
+            flex: 1; overflow-y: auto; padding: 1rem;
+            display: flex; flex-direction: column; gap: 0.6rem;
+        }
+        .chatbot-messages::-webkit-scrollbar { width: 4px; }
+        .chatbot-messages::-webkit-scrollbar-track { background: transparent; }
+        .chatbot-messages::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.25); border-radius: 9999px; }
+
+        .chatbot-msg {
+            max-width: 82%;
+            padding: 0.6rem 0.85rem;
+            border-radius: 1rem;
+            font-size: 0.82rem;
+            line-height: 1.55;
+            color: #e2e8f0;
+            word-break: break-word;
+            animation: chatMsg 0.25s ease;
+        }
+        @keyframes chatMsg { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        .chatbot-msg.assistant {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-bottom-left-radius: 0.35rem;
+            align-self: flex-start;
+        }
+        .chatbot-msg.user {
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.22), rgba(99, 102, 241, 0.18));
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-bottom-right-radius: 0.35rem;
+            align-self: flex-end;
+        }
+        .chatbot-msg .msg-time {
+            display: block; font-size: 0.6rem; color: #64748b; margin-top: 0.3rem; text-align: right;
+        }
+        .chatbot-msg.assistant .msg-time { text-align: left; }
+
+        .chatbot-typing { display: flex; align-items: center; gap: 4px; padding: 0.5rem 0.85rem; }
+        .chatbot-typing span {
+            width: 6px; height: 6px; border-radius: 50%; background: #64748b;
+            animation: typingBounce 1.2s infinite;
+        }
+        .chatbot-typing span:nth-child(2) { animation-delay: 0.15s; }
+        .chatbot-typing span:nth-child(3) { animation-delay: 0.3s; }
+        @keyframes typingBounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-4px); } }
+
+        .chatbot-footer {
+            padding: 0.75rem 1rem;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            background: rgba(2, 6, 23, 0.35);
+            flex-shrink: 0;
+        }
+        .chatbot-footer .input-row {
+            display: flex; align-items: center; gap: 0.5rem;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 0.85rem;
+            padding: 0.35rem 0.5rem 0.35rem 0.85rem;
+            transition: border-color 0.2s;
+        }
+        .chatbot-footer .input-row:focus-within { border-color: rgba(56, 189, 248, 0.4); }
+        .chatbot-footer input {
+            flex: 1; background: transparent; border: none; outline: none;
+            font-size: 0.82rem; color: #e2e8f0;
+        }
+        .chatbot-footer input::placeholder { color: #475569; }
+        .chatbot-footer .send-btn {
+            width: 34px; height: 34px; border-radius: 0.65rem;
+            background: linear-gradient(135deg, #0ea5e9, #6366f1);
+            border: none; color: #fff; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.8rem;
+            transition: transform 0.15s, opacity 0.15s;
+            flex-shrink: 0;
+        }
+        .chatbot-footer .send-btn:hover { transform: scale(1.06); }
+        .chatbot-footer .send-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .chatbot-chips {
+            display: flex; flex-wrap: wrap; gap: 0.35rem;
+            padding: 0.5rem 1rem 0;
+        }
+        .chatbot-chip {
+            font-size: 0.68rem; font-weight: 600;
+            padding: 0.3rem 0.6rem;
+            border-radius: 9999px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            color: #94a3b8;
+            cursor: pointer;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+        .chatbot-chip:hover { background: rgba(56, 189, 248, 0.12); border-color: rgba(56, 189, 248, 0.3); color: #7dd3fc; }
+    </style>
+    {% block style_extra %}{% endblock %}
+</head>
+<body class="h-screen overflow-hidden">
+    <div class="flex h-full p-4 gap-4">
+        <aside class="w-72 glass-sidebar flex flex-col z-30 h-full fixed inset-y-4 left-4 md:relative md:inset-auto md:left-auto transform transition-[transform,width] duration-300 -translate-x-full md:translate-x-0" id="sidebar">
+            <div class="h-16 flex items-center px-5">
+                <a href="/" class="flex items-center gap-3 w-full">
+                    <div class="h-10 w-10 rounded-xl bg-slate-900/40 border border-white/10 flex items-center justify-center shadow-inner">
+                        <img src="/static/img/logo.png" alt="SmartTraffic AI Logo" class="h-7 w-auto">
+                    </div>
+                    <div class="leading-tight sidebar-text">
+                        <div class="text-white font-semibold text-sm tracking-tight">SmartTraffic AI</div>
+                        <div class="text-[10px] text-slate-500 uppercase tracking-widest">Control Center</div>
+                    </div>
+                    <div class="ml-auto sidebar-text">
+                        <span class="inline-flex h-2 w-2 rounded-full bg-emerald-400"></span>
+                    </div>
+                </a>
+            </div>
+            <div class="flex-1 overflow-y-auto px-4 pb-5">
+                {% set current_path = request.path if request is defined else '' %}
+                <div class="nav-section">Navigation</div>
+                <a href="/" class="nav-link mb-1 {{ 'active' if current_path == '/' else '' }}">
+                    <i class="fas fa-desktop w-5 opacity-80"></i>
+                    <span class="sidebar-text">Monitor</span>
+                </a>
+                <a href="/dashboard" class="nav-link mb-1 {{ 'active' if current_path.startswith('/dashboard') else '' }}">
+                    <i class="fas fa-chart-pie w-5 opacity-80"></i>
+                    <span class="sidebar-text">Dashboard</span>
+                </a>
+                <a href="/analysis" class="nav-link mb-1 {{ 'active' if current_path.startswith('/analysis') else '' }}">
+                    <i class="fas fa-chart-line w-5 opacity-80"></i>
+                    <span class="sidebar-text">Analytics</span>
+                </a>
+                <a href="#" onclick="return false;" class="nav-link mb-1 disabled">
+                    <i class="fas fa-tag w-5 opacity-80"></i>
+                    <span class="sidebar-text">Labeling</span>
+                </a>
+                <a href="#" onclick="return false;" class="nav-link mb-1 disabled">
+                    <i class="fas fa-dumbbell w-5 opacity-80"></i>
+                    <span class="sidebar-text">Training</span>
+                </a>
+                <a href="/documentation" class="nav-link mb-1 {{ 'active' if current_path.startswith('/documentation') else '' }}">
+                    <i class="fas fa-book w-5 opacity-80"></i>
+                    <span class="sidebar-text">Documentation</span>
+                </a>
+                <a href="#" onclick="return false;" class="nav-link mb-1 disabled">
+                    <i class="fas fa-download w-5 opacity-80"></i>
+                    <span class="sidebar-text">Export</span>
+                </a>
+                <div class="sidebar-extra">
+                    {% block sidebar_nav %}{% endblock %}
+                </div>
+                <div class="mt-6 pt-6 border-t border-white/5 sidebar-actions">
+                    {% block sidebar_actions %}{% endblock %}
+                </div>
+            </div>
+            <div class="px-4 pb-4">
+                <div class="glass-panel px-4 py-3 flex items-center justify-between">
+                    <div class="min-w-0 sidebar-text">
+                        <div class="text-[11px] text-slate-400 flex items-center gap-2">
+                            <span class="inline-flex h-2 w-2 rounded-full bg-emerald-400"></span>
+                            <span class="truncate">System Online</span>
+                        </div>
+                        <div class="text-[10px] text-slate-500 mt-1">AI Engine: Ready</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-slate-200 font-semibold tabular-nums" id="current-time">--:--</div>
+                        <div class="text-[10px] text-slate-500 uppercase tracking-wider" id="current-date">--/--/----</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        <div id="sidebar-overlay" class="fixed inset-0 bg-black/55 z-20 hidden md:hidden"></div>
+        <main class="flex-1 flex flex-col min-w-0">
+            <header class="h-16 glass-header flex items-center justify-between px-4 md:px-6 z-10 shrink-0">
+                <div class="flex items-center gap-3 min-w-0">
+                    <button id="sidebar-toggle" class="md:hidden text-slate-400 hover:text-white transition-colors">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                    <button id="sidebar-collapse" class="hidden md:inline-flex items-center justify-center w-10 h-10 rounded-lg border border-white/10 text-slate-300 hover:text-white hover:bg-white/5 transition-colors" title="Collapse Sidebar" aria-label="Collapse Sidebar">
+                        <i class="fas fa-angles-left"></i>
+                    </button>
+                    <div class="min-w-0">
+                        <div class="text-[11px] text-slate-500 uppercase tracking-wider">{% block header_kicker %}{% endblock %}</div>
+                        <div class="text-white font-semibold truncate">{% block header_title %}{% endblock %}</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    {% block header_actions %}{% endblock %}
+                </div>
+            </header>
+            <div class="flex-1 overflow-y-auto p-4 md:p-6 relative" id="main-scroll">
+                <div class="absolute inset-0 hud-grid opacity-20 pointer-events-none"></div>
+                <div class="relative">
+                    {% block content %}{% endblock %}
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div class="fixed bottom-5 right-5 z-50">
+        <div class="relative">
+            <button id="chatbot-fab" class="chatbot-fab chatbot-idle relative flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-indigo-500/20" aria-label="Open Chatbot" title="SmartTraffic Assistant">
+                <i class="fas fa-robot text-lg"></i>
+            </button>
+            <div id="chatbot-panel" class="chatbot-panel hidden absolute bottom-16 right-0">
+                <!-- Header -->
+                <div class="chatbot-header">
+                    <div class="avatar">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="info">
+                        <div class="name">SmartTraffic AI</div>
+                        <div class="status">
+                            <span id="chatbot-llm-dot" class="inline-flex h-2 w-2 rounded-full bg-slate-500"></span>
+                            <span id="chatbot-llm-text">Offline</span>
+                        </div>
+                    </div>
+                    <button id="chatbot-close" class="close-btn" aria-label="Close Chatbot">
+                        <i class="fas fa-xmark text-sm"></i>
+                    </button>
+                </div>
+
+                <!-- Messages -->
+                <div id="chatbot-messages" class="chatbot-messages"></div>
+
+                <!-- Quick chips -->
+                <div class="chatbot-chips" id="chatbot-chips">
+                    <button class="chatbot-chip" data-msg="total 30 hari">📊 Total 30 hari</button>
+                    <button class="chatbot-chip" data-msg="status kamera">📷 Status kamera</button>
+                    <button class="chatbot-chip" data-msg="top kamera">🏆 Top kamera</button>
+                    <button class="chatbot-chip" data-msg="prediksi besok jam 8 pagi">🔮 Prediksi</button>
+                </div>
+
+                <!-- Footer / Input -->
+                <div class="chatbot-footer">
+                    <div class="input-row">
+                        <input id="chatbot-input" type="text" placeholder="Tanya sesuatu..." autocomplete="off">
+                        <button id="chatbot-send" class="send-btn" aria-label="Send">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (() => {
+            const toggle = document.getElementById('sidebar-toggle');
+            const collapse = document.getElementById('sidebar-collapse');
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            const body = document.body;
+            const updateClock = () => {
+                const now = new Date();
+                const timeEl = document.getElementById('current-time');
+                const dateEl = document.getElementById('current-date');
+                if (timeEl) timeEl.textContent = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                if (dateEl) dateEl.textContent = now.toLocaleDateString('id-ID');
+            };
+            const toggleMenu = () => {
+                if (!sidebar || !overlay) return;
+                sidebar.classList.toggle('-translate-x-full');
+                overlay.classList.toggle('hidden');
+            };
+            const setCollapsed = (isCollapsed) => {
+                if (!body) return;
+                body.classList.toggle('sidebar-collapsed', Boolean(isCollapsed));
+                try { localStorage.setItem('sidebarCollapsed', Boolean(isCollapsed) ? '1' : '0'); } catch {}
+                if (collapse) {
+                    collapse.title = isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar';
+                    collapse.setAttribute('aria-label', collapse.title);
+                    const icon = collapse.querySelector('i');
+                    if (icon) {
+                        icon.className = isCollapsed ? 'fas fa-angles-right' : 'fas fa-angles-left';
+                    }
+                }
+            };
+            const toggleCollapsed = () => {
+                const next = !body.classList.contains('sidebar-collapsed');
+                setCollapsed(next);
+            };
+            if (toggle) toggle.addEventListener('click', toggleMenu);
+            if (overlay) overlay.addEventListener('click', toggleMenu);
+            if (collapse) collapse.addEventListener('click', toggleCollapsed);
+            try {
+                const saved = localStorage.getItem('sidebarCollapsed');
+                if (saved === '1') setCollapsed(true);
+            } catch {}
+            updateClock();
+            setInterval(updateClock, 1000);
+        })();
+    </script>
+    <script>
+        (() => {
+            const fab = document.getElementById('chatbot-fab');
+            const panel = document.getElementById('chatbot-panel');
+            const closeBtn = document.getElementById('chatbot-close');
+            const input = document.getElementById('chatbot-input');
+            const sendBtn = document.getElementById('chatbot-send');
+            const list = document.getElementById('chatbot-messages');
+
+            if (!fab || !panel || !closeBtn || !input || !sendBtn || !list) return;
+
+            let greeted = false;
+            let sessionId = null;
+            try {
+                sessionId = localStorage.getItem('chatbot_session_id');
+                if (!sessionId) {
+                    sessionId = (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + '-' + String(Math.random()).slice(2);
+                    localStorage.setItem('chatbot_session_id', sessionId);
+                }
+            } catch (e) {
+                sessionId = String(Date.now()) + '-' + String(Math.random()).slice(2);
+            }
+
+            const HISTORY_KEY = `chatbot_history_v1:${sessionId}`;
+            const OPEN_KEY = `chatbot_open_v1:${sessionId}`;
+
+            const loadHistory = () => {
+                try {
+                    const raw = sessionStorage.getItem(HISTORY_KEY);
+                    if (!raw) return [];
+                    const parsed = JSON.parse(raw);
+                    return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+                } catch {
+                    return [];
+                }
+            };
+
+            const saveHistory = (items) => {
+                const arr = Array.isArray(items) ? items.filter(Boolean) : [];
+                const trimmed = arr.slice(-60).map(m => ({
+                    role: String((m && m.role) || ''),
+                    text: String((m && m.text) || ''),
+                    ts: Number((m && m.ts) || Date.now()),
+                })).filter(m => m.role && m.text);
+                try { sessionStorage.setItem(HISTORY_KEY, JSON.stringify(trimmed)); } catch {}
+            };
+
+            const renderHistory = (items) => {
+                try { list.innerHTML = ''; } catch {}
+                (items || []).forEach(m => {
+                    const role = String((m && m.role) || '');
+                    const text = String((m && m.text) || '');
+                    if (!role || !text) return;
+                    addMessage(role, text, { persist: false });
+                });
+            };
+
+            const scrollToBottom = () => {
+                try { list.scrollTop = list.scrollHeight; } catch {}
+            };
+
+            const addMessage = (role, text, opts) => {
+                const o = opts && typeof opts === 'object' ? opts : {};
+                const persist = o.persist !== false;
+                const row = document.createElement('div');
+                row.className = 'flex ' + (role === 'user' ? 'justify-end' : 'justify-start');
+
+                const bubble = document.createElement('div');
+                bubble.className = `chatbot-msg ${role === 'user' ? 'user' : 'assistant'}`;
+
+                const content = document.createElement('span');
+                content.style.whiteSpace = 'pre-wrap';
+                content.textContent = String(text || '');
+                bubble.appendChild(content);
+
+                // Timestamp
+                if (o.persist !== false && text !== 'Mengetik...') {
+                    const ts = document.createElement('span');
+                    ts.className = 'msg-time';
+                    const now = new Date();
+                    ts.textContent = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                    bubble.appendChild(ts);
+                }
+
+                row.appendChild(bubble);
+                list.appendChild(row);
+                scrollToBottom();
+                if (persist) {
+                    const history = loadHistory();
+                    history.push({ role: String(role || ''), text: String(text || ''), ts: Date.now() });
+                    saveHistory(history);
+                }
+                return bubble;
+            };
+
+            // Typing indicator
+            const showTyping = () => {
+                const row = document.createElement('div');
+                row.className = 'flex justify-start';
+                row.id = 'chatbot-typing-row';
+                const bubble = document.createElement('div');
+                bubble.className = 'chatbot-msg assistant chatbot-typing';
+                bubble.innerHTML = '<span></span><span></span><span></span>';
+                row.appendChild(bubble);
+                list.appendChild(row);
+                scrollToBottom();
+            };
+            const hideTyping = () => {
+                const el = document.getElementById('chatbot-typing-row');
+                if (el) el.remove();
+            };
+
+            const UI_ACTION_KEY = 'chatbot_ui_actions_v1';
+
+            const normalizeUiActions = (actions) => {
+                if (!actions) return [];
+                if (Array.isArray(actions)) return actions.filter(Boolean);
+                if (typeof actions === 'object') return [actions];
+                return [];
+            };
+
+            const storeUiActions = (actions) => {
+                const arr = normalizeUiActions(actions);
+                if (!arr.length) return;
+                try { sessionStorage.setItem(UI_ACTION_KEY, JSON.stringify(arr)); } catch {}
+            };
+
+            const popUiActions = () => {
+                try {
+                    const raw = sessionStorage.getItem(UI_ACTION_KEY);
+                    if (!raw) return [];
+                    sessionStorage.removeItem(UI_ACTION_KEY);
+                    const parsed = JSON.parse(raw);
+                    return normalizeUiActions(parsed);
+                } catch {
+                    return [];
+                }
+            };
+
+            const ensureSelectValue = (sel, value, label) => {
+                if (!sel || !value) return false;
+                const v = String(value);
+                const has = Array.from(sel.options || []).some(o => String(o.value) === v);
+                if (!has) {
+                    const opt = document.createElement('option');
+                    opt.value = v;
+                    opt.innerText = String(label || value);
+                    sel.appendChild(opt);
+                }
+                sel.value = v;
+                return true;
+            };
+
+            const applySingleUiAction = (action) => {
+                if (!action || typeof action !== 'object') return { applied: false, navigated: false };
+                const type = String(action.type || '').trim();
+
+                if (type === 'navigate') {
+                    const path = String(action.path || '').trim();
+                    if (!path) return { applied: false, navigated: false };
+                    if (window.location && window.location.pathname !== path) {
+                        return { applied: true, navigated: true, path };
+                    }
+                    return { applied: false, navigated: false };
+                }
+
+                if (type === 'dashboard_predict') {
+                    const raw = String(action.target_time_local || action.target_time || '').trim();
+                    const scenario = (action && Object.prototype.hasOwnProperty.call(action, 'scenario')) ? action.scenario : null;
+                    let inputVal = '';
+                    if (raw) {
+                        const t = raw.includes('T') ? raw : raw.replace(' ', 'T');
+                        inputVal = String(t).slice(0, 16);
+                    }
+                    const predictTimeEl = document.getElementById('predictTime');
+                    if (predictTimeEl && inputVal) predictTimeEl.value = inputVal;
+                    const quickEl = document.getElementById('quick-predict-time');
+                    if (quickEl && inputVal) quickEl.value = inputVal;
+
+                    if (typeof window.smarttrafficDashboardPredict === 'function') {
+                        try { window.smarttrafficDashboardPredict(action); } catch {}
+                        return { applied: true, navigated: false };
+                    }
+
+                    if (typeof window.runPrediction === 'function') {
+                        try { window.runPrediction(scenario); } catch {}
+                        return { applied: true, navigated: false };
+                    }
+
+                    if (typeof window.showPredictiveModal === 'function') {
+                        try { window.showPredictiveModal(); } catch {}
+                        if (typeof window.runPrediction === 'function') {
+                            try { window.runPrediction(scenario); } catch {}
+                        }
+                        return { applied: true, navigated: false };
+                    }
+
+                    return { applied: false, navigated: false };
+                }
+
+                if (type === 'select_camera') {
+                    const camId = String(action.camera_id || '').trim();
+                    const camName = String(action.camera_name || camId || '').trim();
+                    if (!camId) return { applied: false, navigated: false };
+
+                    const analyticsSel = document.getElementById('camera-filter');
+                    if (analyticsSel) {
+                        const ok = ensureSelectValue(analyticsSel, camId, camName);
+                        try { analyticsSel.dispatchEvent(new Event('change', { bubbles: true })); } catch {}
+                        try { if (typeof window.refreshAnalytics === 'function') window.refreshAnalytics(); } catch {}
+                        return { applied: ok, navigated: false };
+                    }
+
+                    const mapSearch = document.getElementById('map-search');
+                    if (mapSearch) {
+                        mapSearch.value = camName || camId;
+                        try {
+                            mapSearch.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+                        } catch {}
+                        return { applied: true, navigated: false };
+                    }
+
+                    if (typeof window.switchCamera === 'function') {
+                        try { window.switchCamera(camId); } catch {}
+                        return { applied: true, navigated: false };
+                    }
+
+                    return { applied: false, navigated: false };
+                }
+
+                if (type === 'set_period') {
+                    const period = String(action.period || '').trim();
+                    if (!period) return { applied: false, navigated: false };
+                    const sel = document.getElementById('period-filter');
+                    if (!sel) return { applied: false, navigated: false };
+                    const ok = ensureSelectValue(sel, period, period);
+                    try { sel.dispatchEvent(new Event('change', { bubbles: true })); } catch {}
+                    try { if (typeof window.refreshAnalytics === 'function') window.refreshAnalytics(); } catch {}
+                    return { applied: ok, navigated: false };
+                }
+
+                if (type === 'show_prediction_popup') {
+                    if (typeof window.smarttrafficShowPredictionPopup === 'function') {
+                        try { window.smarttrafficShowPredictionPopup(action); } catch {}
+                        return { applied: true, navigated: false };
+                    }
+                    return { applied: false, navigated: false };
+                }
+
+                if (type === 'show_forecast_popup') {
+                    if (typeof window.smarttrafficShowForecastPopup === 'function') {
+                        try { window.smarttrafficShowForecastPopup(action); } catch {}
+                        return { applied: true, navigated: false };
+                    }
+                    return { applied: false, navigated: false };
+                }
+
+                return { applied: false, navigated: false };
+            };
+
+            const applyUiActions = (actions) => {
+                const arr = normalizeUiActions(actions);
+                if (!arr.length) return;
+
+                const nav = arr.find(a => a && typeof a === 'object' && String(a.type || '') === 'navigate');
+                if (nav) {
+                    const rest = arr.filter(a => a !== nav);
+                    const r = applySingleUiAction(nav);
+                    if (r && r.navigated) {
+                        storeUiActions(rest);
+                        try { window.location.href = r.path; } catch {}
+                        return;
+                    }
+                }
+
+                arr.forEach(a => applySingleUiAction(a));
+            };
+
+            const updateLlmStatus = async () => {
+                const dot = document.getElementById('chatbot-llm-dot');
+                const text = document.getElementById('chatbot-llm-text');
+                if (!dot || !text) return;
+                try {
+                    const resp = await fetch('/api/chat/health', { cache: 'no-store' });
+                    const data = await resp.json();
+                    if (data && data.enabled) {
+                        if (data.reachable) {
+                            dot.className = 'inline-flex h-2 w-2 rounded-full bg-emerald-400';
+                            text.textContent = data.model || 'Online';
+                            text.style.color = '#6ee7b7';
+                        } else {
+                            dot.className = 'inline-flex h-2 w-2 rounded-full bg-amber-400';
+                            text.textContent = 'Connecting...';
+                            text.style.color = '#fbbf24';
+                        }
+                    } else {
+                        dot.className = 'inline-flex h-2 w-2 rounded-full bg-slate-500';
+                        text.textContent = 'Offline';
+                        text.style.color = '#64748b';
+                    }
+                } catch (e) {
+                    dot.className = 'inline-flex h-2 w-2 rounded-full bg-amber-400';
+                    text.textContent = 'Connecting...';
+                    text.style.color = '#fbbf24';
+                }
+            };
+
+            const setOpen = (open) => {
+                panel.classList.toggle('hidden', !open);
+                fab.classList.toggle('chatbot-idle', !open);
+                fab.setAttribute('aria-label', open ? 'Close Chatbot' : 'Open Chatbot');
+                if (open) {
+                    updateLlmStatus();
+                    try { sessionStorage.setItem(OPEN_KEY, '1'); } catch {}
+                    const history = loadHistory();
+                    if (history.length) {
+                        renderHistory(history);
+                        greeted = true;
+                    }
+                    if (!greeted) {
+                        greeted = true;
+                        addMessage('assistant', 'Halo! 👋 Aku SmartTraffic AI Assistant.\n\nAku bisa bantu:\n• Cek total kendaraan 30 hari\n• Status & ranking kamera\n• Prediksi lalu lintas\n• Navigasi ke halaman tertentu\n\nKetik pertanyaan atau klik tombol di bawah.');
+                    }
+                    setTimeout(() => input.focus(), 50);
+                } else {
+                    try { sessionStorage.setItem(OPEN_KEY, '0'); } catch {}
+                }
+            };
+
+            const toggleOpen = () => setOpen(panel.classList.contains('hidden'));
+
+            let isSending = false;
+            let aborter = null;
+
+            const send = async () => {
+                if (isSending) return;
+                const text = String(input.value || '').trim();
+                if (!text) return;
+                input.value = '';
+                addMessage('user', text);
+                isSending = true;
+                sendBtn.disabled = true;
+                showTyping();
+
+                // Hide chips after first message
+                const chips = document.getElementById('chatbot-chips');
+                if (chips) chips.style.display = 'none';
+
+                let timeoutId = null;
+                try {
+                    if (aborter) {
+                        try { aborter.abort(); } catch (e) {}
+                    }
+                    const localAborter = new AbortController();
+                    aborter = localAborter;
+                    timeoutId = setTimeout(() => {
+                        try { localAborter.abort(); } catch (e) {}
+                    }, 90000);
+                    const resp = await fetch('/api/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message: text, page: window.location.pathname, session_id: sessionId }),
+                        signal: localAborter.signal
+                    });
+                    const data = await resp.json();
+                    const replyText = (data && data.reply) ? String(data.reply) : 'Maaf, aku gagal ambil jawaban.';
+                    hideTyping();
+                    addMessage('assistant', replyText);
+                    try { applyUiActions(data && (data.ui_actions || data.ui_action)); } catch (e) {}
+                } catch (e) {
+                    const errText = (e && String(e.name || '').toLowerCase() === 'aborterror')
+                        ? 'Permintaan terlalu lama. Coba ulang ya.'
+                        : 'Maaf, koneksi bermasalah. Coba lagi ya.';
+                    hideTyping();
+                    addMessage('assistant', errText);
+                } finally {
+                    if (timeoutId) {
+                        try { clearTimeout(timeoutId); } catch (e) {}
+                    }
+                    sendBtn.disabled = false;
+                    isSending = false;
+                    aborter = null;
+                    scrollToBottom();
+                }
+            };
+
+            fab.addEventListener('click', toggleOpen);
+            closeBtn.addEventListener('click', () => setOpen(false));
+            sendBtn.addEventListener('click', send);
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    send();
+                }
+                if (e.key === 'Escape') setOpen(false);
+            });
+
+            // Quick-action chips
+            const chipsContainer = document.getElementById('chatbot-chips');
+            if (chipsContainer) {
+                chipsContainer.addEventListener('click', (e) => {
+                    const chip = e.target.closest('.chatbot-chip');
+                    if (!chip) return;
+                    const msg = chip.getAttribute('data-msg');
+                    if (msg) {
+                        input.value = msg;
+                        send();
+                    }
+                });
+            }
+
+            const pending = popUiActions();
+            if (pending.length) {
+                setTimeout(() => {
+                    try { applyUiActions(pending); } catch {}
+                }, 150);
+            }
+
+            try {
+                const isOpen = sessionStorage.getItem(OPEN_KEY) === '1';
+                if (isOpen) setOpen(true);
+            } catch {}
+        })();
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

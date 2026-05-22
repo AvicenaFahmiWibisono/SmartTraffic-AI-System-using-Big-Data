@@ -1,0 +1,1512 @@
+{% extends "base.html" %}
+{% block title %}SmartTraffic AI - Monitor{% endblock %}
+{% block header_kicker %}Monitor{% endblock %}
+{% block header_title %}Live Monitor{% endblock %}
+{% block head_extra %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+{% block style_extra %}
+    <style>
+        .tech-border { position: relative; }
+        .tech-border::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border-radius: 0.9rem;
+            padding: 1px;
+            background: linear-gradient(45deg, rgba(56, 189, 248, 0.35), rgba(16, 185, 129, 0.12), rgba(56, 189, 248, 0.35));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+        .live-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background-color: #ef4444;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(30, 41, 59, 0.5); border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    </style>
+{% endblock %}
+{% block sidebar_actions %}
+    <div class="space-y-3">
+        <div class="glass-panel p-3">
+            <div class="flex items-center justify-between">
+                <div class="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">Actions</div>
+                <div class="text-[10px] text-slate-600">Admin</div>
+            </div>
+            <div class="mt-3 grid gap-2">
+                <button onclick="openAddModal()" class="w-full px-3 py-2 bg-slate-900/30 hover:bg-slate-900/55 text-white rounded-xl text-sm font-semibold transition-all flex items-center justify-between border border-white/10 hover:border-sky-400/30">
+                    <span class="flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-400/20 flex items-center justify-center">
+                            <i class="fas fa-plus text-sky-300"></i>
+                        </span>
+                        <span>Add Camera</span>
+                    </span>
+                    <i class="fas fa-chevron-right text-slate-500"></i>
+                </button>
+                <button onclick="resetData()" class="w-full px-3 py-2 bg-slate-900/30 hover:bg-rose-900/20 text-rose-200 rounded-xl text-sm font-semibold transition-all flex items-center justify-between border border-white/10 hover:border-rose-400/30">
+                    <span class="flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-lg bg-rose-500/10 border border-rose-400/20 flex items-center justify-center">
+                            <i class="fas fa-trash-alt text-rose-300"></i>
+                        </span>
+                        <span>Reset Data</span>
+                    </span>
+                    <i class="fas fa-chevron-right text-slate-500"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="glass-panel p-3">
+            <div class="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">Export</div>
+            <div class="mt-3 grid gap-2">
+                <a href="/metrics" target="_blank" class="w-full px-3 py-2 bg-slate-900/25 hover:bg-slate-900/55 text-slate-100 rounded-xl text-sm font-semibold transition-all flex items-center justify-between border border-white/10 hover:border-sky-400/30">
+                    <span class="flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-400/20 flex items-center justify-center">
+                            <i class="fas fa-chart-line text-sky-300"></i>
+                        </span>
+                        <span>Prometheus</span>
+                    </span>
+                    <i class="fas fa-arrow-up-right-from-square text-slate-500 text-xs"></i>
+                </a>
+                <a href="/export/csv" target="_blank" class="w-full px-3 py-2 bg-slate-900/25 hover:bg-slate-900/55 text-slate-100 rounded-xl text-sm font-semibold transition-all flex items-center justify-between border border-white/10 hover:border-emerald-400/25">
+                    <span class="flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-400/20 flex items-center justify-center">
+                            <i class="fas fa-file-csv text-emerald-300"></i>
+                        </span>
+                        <span>Export CSV</span>
+                    </span>
+                    <i class="fas fa-arrow-up-right-from-square text-slate-500 text-xs"></i>
+                </a>
+                <button onclick="openExportModal()" class="w-full px-3 py-2 bg-slate-900/25 hover:bg-slate-900/55 text-slate-100 rounded-xl text-sm font-semibold transition-all flex items-center justify-between border border-white/10 hover:border-amber-400/25">
+                    <span class="flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-400/20 flex items-center justify-center">
+                            <i class="fas fa-sliders text-amber-300"></i>
+                        </span>
+                        <span>CSV Custom Range</span>
+                    </span>
+                    <i class="fas fa-chevron-right text-slate-500"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block content %}
+    <div class="space-y-6 max-w-7xl mx-auto">
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Left Column: Location List (Dashboard Style) -->
+            <div class="lg:col-span-1 space-y-4">
+                <div class="glass-panel p-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">Available Cameras</h3>
+                        <button onclick="openAddModal()" class="text-xs bg-blue-600 hover:bg-blue-500 text-white px-2 py-1 rounded transition-colors" title="Add New Camera">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                    <div id="camera-list" class="space-y-3 overflow-y-auto pr-2 custom-scrollbar" style="max-height: 880px;">
+                        <!-- Camera Items will be injected here -->
+                        <div class="animate-pulse flex space-x-4">
+                            <div class="rounded-full bg-slate-700 h-10 w-10"></div>
+                            <div class="flex-1 space-y-2 py-1">
+                                <div class="h-2 bg-slate-700 rounded"></div>
+                                <div class="space-y-3">
+                                    <div class="grid grid-cols-3 gap-4">
+                                        <div class="h-2 bg-slate-700 rounded col-span-2"></div>
+                                        <div class="h-2 bg-slate-700 rounded col-span-1"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Manual Stream Input (Moved here as fallback) -->
+                <div class="glass-panel p-4">
+                    <h3 class="text-xs font-semibold text-gray-500 mb-2 uppercase">Custom Stream</h3>
+                    <div class="flex gap-2">
+                         <input type="text" id="stream-url" placeholder="rtsp:// or http://..." 
+                           class="bg-slate-900/50 border border-slate-600 text-white text-xs rounded focus:ring-blue-500 focus:border-blue-500 block w-full p-2">
+                        <button onclick="updateStream()" class="text-white bg-slate-700 hover:bg-slate-600 rounded px-3 transition-colors">
+                            <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Quick Stats</h3>
+                        <div class="flex items-center gap-2 text-[11px] text-slate-400 bg-slate-900/40 border border-white/5 rounded-lg px-2 py-1">
+                            <i class="fas fa-calendar-day text-slate-500"></i>
+                            <span>Today</span>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-slate-900/35 border border-white/5 rounded-xl p-3">
+                            <div class="text-[10px] text-slate-500 uppercase tracking-wider">Total Vehicles</div>
+                            <div class="mt-1 flex items-end justify-between">
+                                <div class="text-2xl font-bold text-white tabular-nums" id="total-count">0</div>
+                                <i class="fas fa-car-side text-sky-300/60"></i>
+                            </div>
+                        </div>
+                        <div class="bg-slate-900/35 border border-white/5 rounded-xl p-3">
+                            <div class="text-[10px] text-slate-500 uppercase tracking-wider">Cars</div>
+                            <div class="mt-1 flex items-end justify-between">
+                                <div class="text-2xl font-bold text-white tabular-nums" id="count-car">0</div>
+                                <i class="fas fa-car text-emerald-300/60"></i>
+                            </div>
+                            <div class="mt-2 w-full bg-slate-700/50 rounded-full h-1.5 overflow-hidden">
+                                <div class="bg-gradient-to-r from-emerald-500 to-emerald-300 h-full rounded-full transition-all duration-500" style="width: 0%" id="bar-car"></div>
+                            </div>
+                        </div>
+                        <div class="bg-slate-900/35 border border-white/5 rounded-xl p-3">
+                            <div class="text-[10px] text-slate-500 uppercase tracking-wider">Motorcycles</div>
+                            <div class="mt-1 flex items-end justify-between">
+                                <div class="text-2xl font-bold text-white tabular-nums" id="count-motorcycle">0</div>
+                                <i class="fas fa-motorcycle text-amber-300/60"></i>
+                            </div>
+                            <div class="mt-2 w-full bg-slate-700/50 rounded-full h-1.5 overflow-hidden">
+                                <div class="bg-gradient-to-r from-amber-500 to-yellow-300 h-full rounded-full transition-all duration-500" style="width: 0%" id="bar-motorcycle"></div>
+                            </div>
+                        </div>
+                        <a href="/dashboard" class="bg-slate-900/35 border border-white/5 rounded-xl p-3 hover:bg-slate-900/55 transition-colors flex items-center justify-between">
+                            <div>
+                                <div class="text-[10px] text-slate-500 uppercase tracking-wider">View</div>
+                                <div class="text-sm font-semibold text-white">Dashboard</div>
+                            </div>
+                            <i class="fas fa-arrow-right text-slate-400"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Active Monitor & Stats -->
+            <div class="lg:col-span-2 space-y-6">
+                
+                <div class="glass-panel p-4 md:p-5">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <span class="inline-flex h-2 w-2 rounded-full bg-emerald-400"></span>
+                            <h2 class="text-sm font-semibold text-slate-200">Live Monitor</h2>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button id="btn-monitor-fullscreen" class="px-3 py-2 rounded-lg bg-slate-900/35 border border-white/10 text-slate-200 hover:bg-slate-900/55 transition-colors text-xs font-semibold flex items-center gap-2">
+                                <i class="fas fa-expand"></i>
+                                <span class="hidden sm:inline">Fullscreen</span>
+                            </button>
+                            <button class="w-10 h-10 rounded-lg bg-slate-900/35 border border-white/10 text-slate-500 cursor-not-allowed" disabled>
+                                <i class="fas fa-gear"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="monitor-surface" class="relative">
+                <div id="welcome-screen" class="glass-panel h-full min-h-[440px] flex flex-col items-center justify-center text-center p-10 relative overflow-hidden group">
+                    <div class="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-50"></div>
+                    <div class="absolute -top-24 -right-24 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl group-hover:bg-blue-500/20 transition-all duration-1000"></div>
+                    <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl group-hover:bg-purple-500/20 transition-all duration-1000"></div>
+                    <div class="relative z-10 space-y-6 max-w-lg">
+                        <div class="w-24 h-24 mx-auto bg-slate-800/50 rounded-2xl flex items-center justify-center border border-slate-700/50 shadow-xl mb-8 group-hover:scale-110 transition-transform duration-500">
+                            <i class="fas fa-video text-5xl text-blue-400 drop-shadow-[0_0_15px_rgba(96,165,250,0.5)]"></i>
+                        </div>
+                        <h2 class="text-4xl font-bold text-white tracking-tight">Smart Traffic <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">AI Monitor</span></h2>
+                        <div class="grid grid-cols-2 gap-4 mt-8">
+                            <div class="bg-slate-800/40 rounded-xl p-4 border border-slate-700/30">
+                                <p class="text-slate-400 text-xs uppercase tracking-wider mb-1">System Status</p>
+                                <div class="flex items-center justify-center gap-2"><span class="relative flex h-3 w-3"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span></span><span class="text-green-400 font-semibold">Online</span></div>
+                            </div>
+                            <div class="bg-slate-800/40 rounded-xl p-4 border border-slate-700/30">
+                                 <p class="text-slate-400 text-xs uppercase tracking-wider mb-1">AI Engine</p>
+                                 <p class="text-blue-400 font-semibold">Ready</p>
+                            </div>
+                        </div>
+                        <p class="text-slate-400 text-lg leading-relaxed pt-4">Select a camera from the <span class="text-white font-medium">Available Cameras</span> list to view real-time traffic analysis and statistics.</p>
+                        <div class="pt-8 animate-bounce"><i class="fas fa-chevron-left text-slate-600 text-xl mr-2"></i><span class="text-slate-500 text-sm">Select Camera</span></div>
+                    </div>
+                </div>
+
+                <!-- Dashboard Content Wrapper (Hidden by Default) -->
+                <div id="camera-dashboard" class="hidden space-y-6">
+                
+                <!-- Video Monitor Header & Toggle -->
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                        <i class="fas fa-video text-blue-500"></i>
+                        <span id="active-camera-name">Active Monitor</span>
+                    </h2>
+                    <button onclick="toggleVideo()" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-sm">
+                        <i class="fas fa-video-slash" id="video-icon"></i>
+                        <span id="video-text">Show Video Monitor</span>
+                    </button>
+                </div>
+
+                <!-- Video Section (Hidden by Default) -->
+                <div id="video-section" class="hidden transition-all duration-300">
+                     <div class="glass-panel p-1 relative overflow-hidden group border border-slate-700/50 shadow-2xl">
+                        <!-- HUD Overlay -->
+                        <div class="absolute inset-0 z-10 pointer-events-none hud-grid opacity-30"></div>
+                        
+                        <!-- Top Bar -->
+                        <div class="absolute top-0 left-0 right-0 z-20 flex justify-between items-start p-4 bg-gradient-to-b from-black/80 to-transparent">
+                            <div class="flex items-center gap-3">
+                                <div class="bg-red-500/20 backdrop-blur-md border border-red-500/50 px-3 py-1 rounded text-xs font-mono text-red-400 flex items-center gap-2 animate-pulse">
+                                    <div class="w-2 h-2 rounded-full bg-red-500"></div>
+                                    REC
+                                </div>
+                                <div class="bg-black/40 backdrop-blur-md border border-white/10 px-3 py-1 rounded text-xs font-mono text-blue-400">
+                                    <i class="fas fa-microchip mr-1"></i> AI ACTIVE
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-xs font-mono text-gray-400" id="video-timestamp">00:00:00:00</div>
+                                <div class="text-[10px] text-gray-500">1080p | 30FPS</div>
+                            </div>
+                        </div>
+
+                        <img id="video-stream" src="{{ url_for('main.video_feed') }}" class="w-full rounded bg-black" alt="Live Stream">
+                        
+                        <!-- Crosshair Center -->
+                        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 border border-white/20 rounded-full z-10 pointer-events-none flex items-center justify-center opacity-50">
+                            <div class="w-1 h-1 bg-white/50 rounded-full"></div>
+                        </div>
+                        
+                        <!-- Bottom Info -->
+                        <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-6 z-20">
+                            <div class="flex gap-8 items-end">
+                                <div>
+                                    <p class="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Model</p>
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-cube text-blue-500"></i>
+                                        <span class="text-sm font-semibold text-white font-mono">YOLOv8-L</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <p class="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Confidence</p>
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-bullseye text-green-500"></i>
+                                        <span class="text-sm font-semibold text-green-400 font-mono">0.85+</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <p class="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Status</p>
+                                    <span class="text-sm font-semibold text-white font-mono" id="fps-counter">LIVE FEED</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Section -->
+                <div class="glass-panel p-2 md:p-6">
+                    <div class="flex justify-between items-center mb-4 px-2 md:px-0">
+                         <h3 class="text-sm font-semibold text-gray-400 uppercase">Activity Trend</h3>
+                         <div class="flex bg-slate-800 rounded-lg p-1">
+                             <button onclick="setChartPeriod('30m')" id="btn-30m" class="px-3 py-1 text-xs font-medium rounded-md transition-all text-gray-400 hover:text-white">30m</button>
+                             <button onclick="setChartPeriod('1h')" id="btn-1h" class="px-3 py-1 text-xs font-medium rounded-md transition-all bg-slate-600 text-white shadow">1h</button>
+                             <button onclick="setChartPeriod('6h')" id="btn-6h" class="px-3 py-1 text-xs font-medium rounded-md transition-all text-gray-400 hover:text-white">6h</button>
+                             <button onclick="setChartPeriod('12h')" id="btn-12h" class="px-3 py-1 text-xs font-medium rounded-md transition-all text-gray-400 hover:text-white">12h</button>
+                             <button onclick="setChartPeriod('24h')" id="btn-24h" class="px-3 py-1 text-xs font-medium rounded-md transition-all text-gray-400 hover:text-white">24h</button>
+                             <button onclick="setChartPeriod('7d')" id="btn-7d" class="px-3 py-1 text-xs font-medium rounded-md transition-all text-gray-400 hover:text-white">7d</button>
+                             <button onclick="setChartPeriod('30d')" id="btn-30d" class="px-3 py-1 text-xs font-medium rounded-md transition-all text-gray-400 hover:text-white">30d</button>
+                         </div>
+                    </div>
+                    <div class="h-64">
+                        <canvas id="activityChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Time Window Analysis -->
+                <div class="glass-panel p-2 md:p-6">
+                    <h3 class="text-sm font-semibold text-gray-400 mb-4 uppercase pl-2 md:pl-0">Traffic Volume (Total Passed)</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left text-gray-400">
+                            <thead class="text-xs text-gray-400 uppercase bg-slate-700/50">
+                                <tr>
+                                    <th class="px-4 py-2 rounded-l-lg">Period</th>
+                                    <th class="px-4 py-2">Total</th>
+                                    <th class="px-4 py-2">Cars</th>
+                                    <th class="px-4 py-2">Motorcycles</th>
+                                    <th class="px-4 py-2 rounded-r-lg text-right">Avg Density</th>
+                                </tr>
+                            </thead>
+                            <tbody id="stats-table-body">
+                                <tr class="animate-pulse">
+                                    <td colspan="5" class="px-4 py-4 text-center">Loading stats...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Detailed Breakdown Table -->
+                <div class="glass-panel p-2 md:p-6 mt-4">
+                    <div class="flex justify-between items-center mb-4 pl-2 md:pl-0">
+                        <h3 class="text-sm font-semibold text-gray-400 uppercase" id="breakdown-title">Detailed Breakdown</h3>
+                        <button onclick="downloadCSV()" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded transition-colors flex items-center gap-2">
+                            <i class="fas fa-download"></i> CSV
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto max-h-96">
+                        <table class="w-full text-sm text-left text-gray-400">
+                            <thead class="text-xs text-gray-400 uppercase bg-slate-700/50 sticky top-0">
+                                <tr>
+                                    <th class="px-4 py-2 rounded-l-lg">Time</th>
+                                    <th class="px-4 py-2">Total</th>
+                                    <th class="px-4 py-2">Cars</th>
+                                    <th class="px-4 py-2">Motorcycles</th>
+                                    <th class="px-4 py-2 rounded-r-lg">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="hourly-table-body">
+                                <tr class="animate-pulse">
+                                    <td colspan="4" class="px-4 py-4 text-center">Loading data...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Export Modal -->
+    <div id="export-modal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center">
+        <div class="glass-panel w-full max-w-md p-5">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-white font-semibold">Export CSV (Custom Range)</h3>
+                <button onclick="closeExportModal()" class="text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <label class="text-xs text-slate-400">Camera</label>
+                    <select id="export-camera" class="w-full bg-slate-900/50 border border-slate-700 rounded px-3 py-2 text-sm text-white">
+                        <option value="all">All Locations</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-xs text-slate-400">Start</label>
+                        <input id="export-start" type="datetime-local" class="w-full bg-slate-900/50 border border-slate-700 rounded px-3 py-2 text-sm text-white">
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400">End</label>
+                        <input id="export-end" type="datetime-local" class="w-full bg-slate-900/50 border border-slate-700 rounded px-3 py-2 text-sm text-white">
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4 flex justify-end gap-2">
+                <button onclick="closeExportModal()" class="px-3 py-2 bg-slate-800 text-slate-300 rounded">Cancel</button>
+                <button onclick="submitExport()" class="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded">Download</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Camera Modal -->
+    <div id="add-camera-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 backdrop-blur-sm">
+        <div class="glass-panel p-6 w-full max-w-md mx-4 relative">
+            <h2 class="text-xl font-bold text-white mb-4">Add New Camera</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1 uppercase">Camera Name</label>
+                    <input type="text" id="new-cam-name" class="w-full bg-slate-900/50 border border-slate-600 text-white rounded p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g. Simpang Dago">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1 uppercase">Stream URL (.m3u8)</label>
+                    <input type="text" id="new-cam-url" class="w-full bg-slate-900/50 border border-slate-600 text-white rounded p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="https://...">
+                </div>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1 uppercase">Latitude</label>
+                        <input type="text" id="new-cam-lat" class="w-full bg-slate-900/50 border border-slate-600 text-white rounded p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="-6.200000">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1 uppercase">Longitude</label>
+                        <input type="text" id="new-cam-lng" class="w-full bg-slate-900/50 border border-slate-600 text-white rounded p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="106.816666">
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-slate-700">
+                    <p class="text-xs text-gray-400 mb-2 uppercase font-semibold">Authentication Required</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1 uppercase">Username</label>
+                            <input type="text" id="new-cam-user" class="w-full bg-slate-900/50 border border-slate-600 text-white rounded p-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1 uppercase">Password</label>
+                            <input type="password" id="new-cam-pass" class="w-full bg-slate-900/50 border border-slate-600 text-white rounded p-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-6">
+                <button onclick="closeAddModal()" class="px-4 py-2 rounded text-sm text-gray-300 hover:text-white hover:bg-slate-700 transition-colors">Cancel</button>
+                <button onclick="saveNewCamera()" class="px-4 py-2 rounded text-sm bg-blue-600 text-white hover:bg-blue-500 transition-colors flex items-center gap-2">
+                    <i class="fas fa-save"></i> Save
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script for Clock and Data Fetching -->
+    <!-- Daily Detail Modal -->
+    <div id="daily-detail-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 backdrop-blur-sm">
+        <div class="glass-panel p-6 w-full max-w-5xl mx-4 relative max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-white" id="daily-modal-title">Daily Breakdown</h2>
+                <div class="flex items-center gap-3">
+                    <button onclick="downloadDailyCSV()" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded transition-colors flex items-center gap-2">
+                        <i class="fas fa-download"></i> CSV
+                    </button>
+                    <button onclick="closeDailyModal()" class="text-gray-400 hover:text-white transition-colors">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Top Section: Chart and Summary -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <!-- Line Chart -->
+                <div class="glass-panel p-4 md:col-span-2 h-72">
+                    <canvas id="dailyChart"></canvas>
+                </div>
+                
+                <!-- Day Summary & Donut -->
+                <div class="glass-panel p-4 flex flex-col items-center justify-center relative">
+                    <h3 class="text-sm font-semibold text-gray-400 uppercase mb-2">Day Summary</h3>
+                    <div class="text-3xl font-bold text-white mb-1" id="daily-total-count">0</div>
+                    <div class="text-xs text-gray-500 mb-4">Total Vehicles</div>
+                    
+                    <div class="relative w-32 h-32 mb-4 flex items-center justify-center">
+                        <canvas id="dailyDonutChart" class="relative z-10"></canvas>
+                        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <div class="text-center">
+                                 <div class="text-[10px] text-gray-400 uppercase tracking-wider">Total</div>
+                                 <div class="text-sm font-bold text-white" id="donut-center-total">0</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Legend -->
+                    <div class="w-full px-4 space-y-2">
+                         <div class="flex justify-between items-center text-xs">
+                             <div class="flex items-center gap-2">
+                                 <span class="w-2 h-2 rounded-full bg-green-400"></span>
+                                 <span class="text-gray-300">Cars</span>
+                             </div>
+                             <span class="text-white font-medium" id="daily-total-cars">0</span>
+                         </div>
+                         <div class="flex justify-between items-center text-xs">
+                             <div class="flex items-center gap-2">
+                                 <span class="w-2 h-2 rounded-full bg-yellow-400"></span>
+                                 <span class="text-gray-300">Motorcycles</span>
+                             </div>
+                             <span class="text-white font-medium" id="daily-total-motors">0</span>
+                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="glass-panel p-2 md:p-6">
+                <h3 class="text-sm font-semibold text-gray-400 mb-4 uppercase">Hourly Breakdown</h3>
+                <div class="overflow-x-auto max-h-60">
+                    <table class="w-full text-sm text-left text-gray-400">
+                        <thead class="text-xs text-gray-400 uppercase bg-slate-700/50 sticky top-0">
+                            <tr>
+                                <th class="px-4 py-2 rounded-l-lg">Time</th>
+                                <th class="px-4 py-2">Total</th>
+                                <th class="px-4 py-2">Cars</th>
+                                <th class="px-4 py-2 rounded-r-lg">Motorcycles</th>
+                            </tr>
+                        </thead>
+                        <tbody id="daily-modal-table-body">
+                            <!-- Rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reset Data Modal -->
+    <div id="reset-login-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 backdrop-blur-sm">
+        <div class="glass-panel p-6 w-full max-w-sm mx-4 relative">
+            <h2 class="text-xl font-bold text-white mb-4 text-center">Admin Login</h2>
+            <p class="text-xs text-gray-400 mb-4 text-center">Please authenticate to reset data.</p>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1 uppercase">Username</label>
+                    <input type="text" id="reset-username" class="w-full bg-slate-900/50 border border-slate-600 text-white rounded p-2 focus:ring-red-500 focus:border-red-500">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1 uppercase">Password</label>
+                    <input type="password" id="reset-password" class="w-full bg-slate-900/50 border border-slate-600 text-white rounded p-2 focus:ring-red-500 focus:border-red-500">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-6">
+                <button onclick="closeResetModal()" class="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors">Cancel</button>
+                <button onclick="submitReset()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm transition-colors flex items-center gap-2">
+                    <i class="fas fa-trash-alt"></i> Confirm Reset
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Camera Login Modal -->
+    <div id="delete-login-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 backdrop-blur-sm">
+        <div class="glass-panel p-6 w-full max-w-sm mx-4 relative">
+            <h2 class="text-xl font-bold text-white mb-4 text-center">Confirm Deletion</h2>
+            <p class="text-xs text-gray-400 mb-4 text-center">Admin authentication required to remove camera.</p>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1 uppercase">Username</label>
+                    <input type="text" id="del-username" class="w-full bg-slate-900/50 border border-slate-600 text-white rounded p-2 focus:ring-red-500 focus:border-red-500">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1 uppercase">Password</label>
+                    <input type="password" id="del-password" class="w-full bg-slate-900/50 border border-slate-600 text-white rounded p-2 focus:ring-red-500 focus:border-red-500">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-6">
+                <button onclick="closeDeleteModal()" class="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors">Cancel</button>
+                <button onclick="submitDelete()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm transition-colors flex items-center gap-2">
+                    <i class="fas fa-trash-alt"></i> Delete Camera
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="fixed bottom-4 right-6 z-40 opacity-50 hover:opacity-100 transition-opacity">
+        <a href="https://avicenafahmi.com" target="_blank" class="text-xs font-mono text-slate-500 hover:text-sky-400 flex items-center gap-2">
+            <span>&copy; avicenafahmi.com</span>
+        </a>
+    </footer>
+{% endblock %}
+{% block scripts %}
+    <script>
+        // Global State
+        let activeSourceId = null;
+        let cameraToDeleteId = null;
+        let editingCameraId = null;
+
+        (() => {
+            const btn = document.getElementById('btn-monitor-fullscreen');
+            const target = document.getElementById('monitor-surface');
+            if (!btn || !target) return;
+            btn.addEventListener('click', async () => {
+                try {
+                    if (document.fullscreenElement) await document.exitFullscreen();
+                    else await target.requestFullscreen();
+                } catch (e) {}
+            });
+        })();
+
+        // Helper: Calculate Percentage
+        const getPercent = (val, total) => {
+            if (!total || total === 0) return '0%';
+            return Math.round((val / total) * 100) + '%';
+        };
+
+        const getVideoFeedUrl = () => {
+            if (activeSourceId) return `/video_feed/${activeSourceId}`;
+            return `/video_feed`;
+        };
+
+        // Render Camera List
+        function renderCameraList(sources) {
+            const listContainer = document.getElementById('camera-list');
+            listContainer.innerHTML = '';
+
+            sources.forEach(source => {
+                const isActive = source.active;
+                activeSourceId = isActive ? source.id : activeSourceId;
+                
+                if (isActive) {
+                    document.getElementById('active-camera-name').innerText = source.name;
+                    const videoSection = document.getElementById('video-section');
+                    if (videoSection && !videoSection.classList.contains('hidden')) {
+                        const videoImg = document.getElementById('video-stream');
+                        if (videoImg) videoImg.src = getVideoFeedUrl() + '?t=' + new Date().getTime();
+                    }
+                }
+
+                const item = document.createElement('div');
+                item.className = `group p-3 rounded-lg flex items-center justify-between cursor-pointer transition-all border ${isActive ? 'bg-blue-600/20 border-blue-500/50' : 'bg-slate-800 border-transparent hover:bg-slate-700'}`;
+                
+                // Main Click Area (Switch Source)
+                const infoDiv = document.createElement('div');
+                infoDiv.className = "flex items-center gap-3 flex-1";
+                infoDiv.onclick = () => switchSource(source.id);
+                infoDiv.innerHTML = `
+                    <div class="relative w-10 h-10 rounded-lg flex items-center justify-center ${isActive ? 'bg-blue-600 shadow-lg shadow-blue-500/30' : 'bg-slate-700/50'} transition-all overflow-hidden">
+                        <i class="fas fa-video ${isActive ? 'text-white' : 'text-gray-400'} z-10 relative"></i>
+                        ${isActive ? '<div class="absolute inset-0 bg-blue-500 blur opacity-20 animate-pulse"></div>' : ''}
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h4 class="text-sm font-semibold ${isActive ? 'text-white' : 'text-gray-300'}">${source.name}</h4>
+                            ${isActive ? '<span class="flex h-2 w-2 relative"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span>' : ''}
+                        </div>
+                        <div class="flex items-center gap-2 mt-0.5">
+                             <p class="text-[10px] text-gray-500 truncate max-w-[120px] opacity-70">${source.url}</p>
+                        </div>
+                    </div>
+                `;
+
+                // Actions Area
+                const actionDiv = document.createElement('div');
+                actionDiv.className = "flex items-center gap-1"; // tighter gap
+                
+                // Edit Button
+                const editBtn = document.createElement('button');
+                editBtn.className = "text-gray-500 hover:text-blue-400 p-2 rounded-lg hover:bg-slate-700/50 transition-all opacity-0 group-hover:opacity-100";
+                editBtn.title = "Edit Camera";
+                editBtn.innerHTML = '<i class="fas fa-cog text-xs"></i>'; // Changed to cog for pro feel
+                editBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    openEditModal(source);
+                };
+
+                // Delete Button
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = "text-gray-500 hover:text-red-500 p-2 rounded-lg hover:bg-slate-700/50 transition-all opacity-0 group-hover:opacity-100";
+                deleteBtn.title = "Delete Camera";
+                deleteBtn.innerHTML = '<i class="fas fa-trash-alt text-xs"></i>';
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation(); // Prevent switching source
+                    openDeleteModal(source.id);
+                };
+                
+                actionDiv.appendChild(editBtn);
+                actionDiv.appendChild(deleteBtn);
+                item.appendChild(infoDiv);
+                item.appendChild(actionDiv);
+                
+                listContainer.appendChild(item);
+            });
+        }
+
+        // --- Modal Functions ---
+        function openAddModal() {
+            editingCameraId = null;
+            document.getElementById('add-camera-modal').classList.remove('hidden');
+            document.getElementById('new-cam-name').value = '';
+            document.getElementById('new-cam-url').value = '';
+            document.getElementById('new-cam-lat').value = '';
+            document.getElementById('new-cam-lng').value = '';
+            document.getElementById('new-cam-user').value = '';
+            document.getElementById('new-cam-pass').value = '';
+            document.getElementById('new-cam-name').focus();
+        }
+
+        function openEditModal(source) {
+            editingCameraId = source.id;
+            document.getElementById('add-camera-modal').classList.remove('hidden');
+            document.getElementById('new-cam-name').value = source.name;
+            document.getElementById('new-cam-url').value = source.url;
+            document.getElementById('new-cam-lat').value = source.lat || '';
+            document.getElementById('new-cam-lng').value = source.lng || '';
+            document.getElementById('new-cam-user').value = '';
+            document.getElementById('new-cam-pass').value = '';
+            document.getElementById('new-cam-name').focus();
+        }
+
+        function closeAddModal() {
+            document.getElementById('add-camera-modal').classList.add('hidden');
+            editingCameraId = null;
+        }
+
+        async function saveNewCamera() {
+            const name = document.getElementById('new-cam-name').value.trim();
+            const url = document.getElementById('new-cam-url').value.trim();
+            const lat = document.getElementById('new-cam-lat').value.trim();
+            const lng = document.getElementById('new-cam-lng').value.trim();
+            const username = document.getElementById('new-cam-user').value.trim();
+            const password = document.getElementById('new-cam-pass').value.trim();
+
+            if (!name || !url) {
+                alert("Please fill in both Name and URL");
+                return;
+            }
+            if (!username || !password) {
+                alert("Please fill in Admin credentials");
+                return;
+            }
+
+            const endpoint = editingCameraId ? '/api/edit_camera' : '/api/add_camera';
+            const payload = { 
+                name, url, lat, lng, username, password,
+                id: editingCameraId // ignored if null/add
+            };
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    closeAddModal();
+                    fetchSources(); // Refresh list
+                } else {
+                    alert("Error: " + result.message);
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Failed to save camera");
+            }
+        }
+
+        function openDeleteModal(id) {
+            cameraToDeleteId = id;
+            document.getElementById('delete-login-modal').classList.remove('hidden');
+            document.getElementById('del-username').value = '';
+            document.getElementById('del-password').value = '';
+            document.getElementById('del-username').focus();
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('delete-login-modal').classList.add('hidden');
+            cameraToDeleteId = null;
+        }
+
+        async function submitDelete() {
+            if (!cameraToDeleteId) return;
+
+            const username = document.getElementById('del-username').value;
+            const password = document.getElementById('del-password').value;
+            
+            if (!username || !password) {
+                alert("Please enter username and password.");
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/delete_camera', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        id: cameraToDeleteId,
+                        username: username,
+                        password: password
+                    })
+                });
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    closeDeleteModal();
+                    fetchSources(); // Refresh list
+                    setTimeout(() => location.reload(), 500);
+                } else {
+                    alert("Error: " + result.message);
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Failed to delete camera");
+            }
+        }
+
+
+        // Switch Source
+        async function switchSource(id) {
+            activeSourceId = id;
+            // Switch View
+            const welcome = document.getElementById('welcome-screen');
+            const dashboard = document.getElementById('camera-dashboard');
+            if (welcome) welcome.classList.add('hidden');
+            if (dashboard) dashboard.classList.remove('hidden');
+
+            // Optimistic UI Update
+            const items = document.getElementById('camera-list').children;
+            // (Simple reload is better to ensure state sync)
+            const videoSection = document.getElementById('video-section');
+            if (videoSection && !videoSection.classList.contains('hidden')) {
+                const videoImg = document.getElementById('video-stream');
+                if (videoImg) videoImg.src = getVideoFeedUrl() + '?t=' + new Date().getTime();
+            }
+            
+            try {
+                const response = await fetch('/api/switch_source', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: id }),
+                });
+                const result = await response.json();
+                if(result.status === 'success') {
+                    // Refresh List
+                    fetchSources();
+                    // Reset Charts/Stats in UI
+                    resetStatsUI();
+                    setChartPeriod('1h');
+                    // Force reload video if visible
+                    if (!videoSection.classList.contains('hidden')) {
+                         const videoImg = document.getElementById('video-stream');
+                         videoImg.src = getVideoFeedUrl() + '?t=' + new Date().getTime();
+                    }
+                }
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        async function fetchSources() {
+            try {
+                const response = await fetch('/api/sources');
+                const sources = await response.json();
+                renderCameraList(sources);
+            } catch (e) { console.error(e); }
+        }
+        
+        // Initial Fetch
+        fetchSources();
+
+        function resetStatsUI() {
+             document.getElementById('total-count').innerText = "0";
+             document.getElementById('count-car').innerText = "0";
+             document.getElementById('count-motorcycle').innerText = "0";
+             // Reset Chart
+             activityChart.data.datasets[0].data = Array(10).fill(0);
+             activityChart.update();
+        }
+
+        // Chart.js Setup
+        const ctx = document.getElementById('activityChart').getContext('2d');
+        const activityChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Traffic Volume',
+                    data: [],
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { 
+                        display: true,
+                        grid: { display: false },
+                        ticks: { color: '#64748b', font: { size: 10 }, maxTicksLimit: 10 }
+                    },
+                    y: { 
+                        display: true, 
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: { color: '#64748b', font: { size: 10 }, beginAtZero: true } 
+                    }
+                }
+            }
+        });
+
+        let chartPeriod = '1h'; // Default to 1h view as requested to be lighter
+        let modalChartInstance = null;
+        let dailyDonutChart = null;
+        let currentModalTs = null;
+
+        function setChartPeriod(period) {
+            chartPeriod = period;
+            
+            // Update buttons
+            ['30m', '1h', '6h', '12h', '24h', '7d', '30d'].forEach(p => {
+                const btn = document.getElementById(`btn-${p}`);
+                if (btn) {
+                    btn.className = period === p 
+                        ? "px-3 py-1 text-xs font-medium rounded-md transition-all bg-slate-600 text-white shadow"
+                        : "px-3 py-1 text-xs font-medium rounded-md transition-all text-gray-400 hover:text-white";
+                }
+            });
+                
+            fetchHistory();
+        }
+
+        // Initialize button state for default period
+        document.addEventListener('DOMContentLoaded', () => {
+             setChartPeriod(chartPeriod);
+        });
+
+        function viewDailyDetails(ts, label) {
+             openDailyModal(ts, label);
+        }
+
+        async function openDailyModal(ts, label) {
+            const modal = document.getElementById('daily-detail-modal');
+            const title = document.getElementById('daily-modal-title');
+            
+            modal.classList.remove('hidden');
+            title.innerText = `Detailed Breakdown (${label})`;
+            currentModalTs = ts;
+            
+            // Show loading state
+            const tbody = document.getElementById('daily-modal-table-body');
+            tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-4 text-center">Loading data...</td></tr>';
+            
+            // Reset Summary
+            const elTotal = document.getElementById('daily-total-count');
+            if (elTotal) {
+                document.getElementById('daily-total-count').innerText = '-';
+                document.getElementById('daily-total-cars').innerText = '-';
+                document.getElementById('daily-total-motors').innerText = '-';
+            }
+            
+            try {
+                const response = await fetch(`/api/history?period=custom&start_ts=${ts}`);
+                const data = await response.json();
+                
+                updateDailyModalChart(data);
+                updateDailyModalTable(data);
+                
+            } catch (e) {
+                console.error(e);
+                tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-4 text-center text-red-500">Failed to load data</td></tr>';
+            }
+        }
+
+        function closeDailyModal() {
+            document.getElementById('daily-detail-modal').classList.add('hidden');
+            currentModalTs = null;
+        }
+
+        function downloadCSV() {
+            let url = `/api/export_csv?period=${chartPeriod}`;
+            if (chartPeriod === 'custom' && currentModalTs) {
+                url += `&start_ts=${currentModalTs}`;
+            }
+            window.location.href = url;
+        }
+
+        function downloadDailyCSV() {
+            if (!currentModalTs) return;
+            const url = `/api/export_csv?period=custom&start_ts=${currentModalTs}`;
+            window.location.href = url;
+        }
+
+        function updateDailyModalChart(data) {
+            const ctx = document.getElementById('dailyChart').getContext('2d');
+            const labels = data.map(d => d.label);
+            const counts = data.map(d => d.count);
+            
+            if (modalChartInstance) {
+                modalChartInstance.destroy();
+            }
+            
+            modalChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Traffic Volume',
+                        data: counts,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { 
+                            display: true,
+                            grid: { display: false },
+                            ticks: { color: '#64748b', font: { size: 10 }, maxTicksLimit: 12 }
+                        },
+                        y: { 
+                            display: true, 
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: '#64748b', font: { size: 10 }, beginAtZero: true } 
+                        }
+                    }
+                }
+            });
+
+            // Calculate Totals for Summary & Donut
+            let totalCount = 0;
+            let totalCars = 0;
+            let totalMotors = 0;
+
+            data.forEach(d => {
+                totalCount += d.count || 0;
+                totalCars += d.cars || 0;
+                totalMotors += d.motors || 0;
+            });
+
+            // Update Summary Text
+            const elTotal = document.getElementById('daily-total-count');
+            const elCars = document.getElementById('daily-total-cars');
+            const elMotors = document.getElementById('daily-total-motors');
+            const elDonutTotal = document.getElementById('donut-center-total');
+            
+            const carPctTotal = totalCount > 0 ? Math.round((totalCars / totalCount) * 100) + '%' : '0%';
+            const motorPctTotal = totalCount > 0 ? Math.round((totalMotors / totalCount) * 100) + '%' : '0%';
+
+            if (elTotal) elTotal.innerText = totalCount;
+            if (elCars) elCars.innerText = `${totalCars} (${carPctTotal})`;
+            if (elMotors) elMotors.innerText = `${totalMotors} (${motorPctTotal})`;
+            if (elDonutTotal) elDonutTotal.innerText = totalCount;
+
+            // Update Donut Chart
+            const donutCanvas = document.getElementById('dailyDonutChart');
+            if (donutCanvas) {
+                const donutCtx = donutCanvas.getContext('2d');
+                
+                if (dailyDonutChart) {
+                    dailyDonutChart.destroy();
+                }
+
+                dailyDonutChart = new Chart(donutCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Cars', 'Motorcycles'],
+                        datasets: [{
+                            data: [totalCars, totalMotors],
+                            backgroundColor: ['#4ade80', '#facc15'], // Green-400, Yellow-400
+                            borderWidth: 0,
+                            hoverOffset: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '70%',
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                         const val = context.raw;
+                                         const pct = totalCount > 0 ? Math.round((val / totalCount) * 100) + '%' : '0%';
+                                         return ` ${context.label}: ${val} (${pct})`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        function updateDailyModalTable(data) {
+            const tbody = document.getElementById('daily-modal-table-body');
+            tbody.innerHTML = '';
+            
+            if (data && data.length > 0) {
+                 // Show chronologically (00:00 -> 23:00)
+                 data.forEach(row => {
+                      const tr = document.createElement('tr');
+                      tr.className = "border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors";
+                      
+                      const carPct = getPercent(row.cars, row.count);
+                      const motorPct = getPercent(row.motors, row.count);
+
+                      tr.innerHTML = `
+                         <td class="px-4 py-3 font-medium text-white">${row.label}</td>
+                         <td class="px-4 py-3 text-blue-400 font-bold">${row.count}</td>
+                         <td class="px-4 py-3 text-green-400">${row.cars} <span class="text-xs text-slate-500 ml-1">(${carPct})</span></td>
+                         <td class="px-4 py-3 text-yellow-400">${row.motors} <span class="text-xs text-slate-500 ml-1">(${motorPct})</span></td>
+                      `;
+                      tbody.appendChild(tr);
+                 });
+            } else {
+                tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-4 text-center">No data available</td></tr>';
+            }
+        }
+
+        async function fetchHistory() {
+             try {
+                let url = `/api/history?period=${chartPeriod}`;
+                if (activeSourceId) {
+                    url += `&camera_id=${activeSourceId}`;
+                }
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data && data.length > 0) {
+                    const labels = data.map(d => d.label);
+                    const counts = data.map(d => d.count);
+                    
+                    activityChart.data.labels = labels;
+                    activityChart.data.datasets[0].data = counts;
+                    activityChart.update();
+                }
+                
+                // Update Detailed Breakdown Table
+                updateHistoryTable(data);
+                
+            } catch (e) { console.error(e); }
+        }
+
+        function updateHistoryTable(data) {
+             const tbody = document.getElementById('hourly-table-body');
+             const title = document.getElementById('breakdown-title');
+             
+             if (title && chartPeriod !== 'custom') {
+                 const periodLabels = {
+                     '30m': 'Last 30 Minutes',
+                     '1h': 'Last 1 Hour',
+                     '6h': 'Last 6 Hours',
+                     '12h': 'Last 12 Hours',
+                     '24h': 'Last 24 Hours',
+                     '7d': 'Last 7 Days',
+                     '30d': 'Last 30 Days'
+                 };
+                 title.innerText = `Detailed Breakdown (${periodLabels[chartPeriod] || chartPeriod})`;
+             }
+
+             if (tbody && data && data.length > 0) {
+                 tbody.innerHTML = '';
+                 
+                 // Show View Action only for 7d and 30d
+                 const showAction = (chartPeriod === '7d' || chartPeriod === '30d');
+                 
+                 // Sort logic: 
+                 // If 24h (Today) or Custom (Specific Day), show Chronological (Oldest -> Newest)
+                 // Otherwise (Last 30m, 1h, etc), show Reverse Chronological (Newest -> Oldest)
+                 let sortedData = [...data];
+                 if (chartPeriod !== '24h' && chartPeriod !== 'custom') {
+                     sortedData.reverse();
+                 }
+                 
+                 sortedData.forEach(row => {
+                      const tr = document.createElement('tr');
+                      tr.className = "border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors";
+                      
+                      const actionHtml = showAction 
+                        ? `<button onclick="viewDailyDetails(${row.ts}, '${row.label}')" class="text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded transition-colors shadow-sm">View</button>` 
+                        : '<span class="text-slate-600">-</span>';
+
+                      const carPct = getPercent(row.cars, row.count);
+                      const motorPct = getPercent(row.motors, row.count);
+
+                      tr.innerHTML = `
+                         <td class="px-4 py-3 font-medium text-white">${row.label}</td>
+                         <td class="px-4 py-3 text-blue-400 font-bold">${row.count}</td>
+                         <td class="px-4 py-3 text-green-400">${row.cars} <span class="text-xs text-slate-500 ml-1">(${carPct})</span></td>
+                         <td class="px-4 py-3 text-yellow-400">${row.motors} <span class="text-xs text-slate-500 ml-1">(${motorPct})</span></td>
+                         <td class="px-4 py-3 text-center">${actionHtml}</td>
+                      `;
+                      tbody.appendChild(tr);
+                 });
+             } else if (tbody) {
+                 tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-4 text-center">No data available for this period</td></tr>';
+             }
+        }
+
+        // Fetch Data from Backend
+        async function fetchStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+
+                // Determine which stats to show (Active Camera vs Global)
+                let targetStats = null;
+                
+                if (activeSourceId && data.sources && data.sources[activeSourceId]) {
+                    // Use Active Camera Stats
+                    targetStats = data.sources[activeSourceId];
+                } else if (data.global_total) {
+                    // Fallback to Global Stats
+                    targetStats = data.global_total;
+                } else {
+                    // Legacy/Root Fallback
+                    targetStats = data;
+                }
+
+                // Extract values
+                let accCount = targetStats.accumulated_count || 0;
+                let accCars = targetStats.cars || (targetStats.accumulated_class_counts ? (targetStats.accumulated_class_counts[0] || 0) : 0);
+                let accMotors = targetStats.motorcycles || (targetStats.accumulated_class_counts ? (targetStats.accumulated_class_counts[1] || 0) : 0);
+                let curCars = targetStats.current_cars || (targetStats.current_class_counts ? (targetStats.current_class_counts[0] || 0) : 0);
+                let curMotors = targetStats.current_motorcycles || (targetStats.current_class_counts ? (targetStats.current_class_counts[1] || 0) : 0);
+                
+                document.getElementById('total-count').innerText = accCount;
+                document.getElementById('fps-counter').innerText = "LIVE";
+                
+                // Helper to update UI
+                const updateUI = (id, accVal, curVal) => {
+                    const totalAcc = accCount || 1;
+                    
+                    // Main Count (Accumulated)
+                    const elCount = document.getElementById(`count-${id}`);
+                    if(elCount) elCount.innerText = accVal;
+                    
+                    // Progress Bar (Based on accumulated share)
+                    const elBar = document.getElementById(`bar-${id}`);
+                    if(elBar) {
+                        const percent = (accVal / totalAcc) * 100;
+                        elBar.style.width = `${percent}%`;
+                    }
+
+                    // Detail Text (if any)
+                    const elAcc = document.getElementById(`acc-${id}`);
+                    if(elAcc) elAcc.innerText = accVal;
+                };
+
+                // 0 = Car, 1 = Motorcycle
+                updateUI('car', accCars, curCars);
+                updateUI('motorcycle', accMotors, curMotors);
+
+                // Update Time Window Stats Table
+                if (data.window_stats) {
+                    const tbody = document.getElementById('stats-table-body');
+                    if (tbody) {
+                        tbody.innerHTML = '';
+                        
+                        const periods = ['10s', '30m', '1h', '5h', '24h'];
+                        const labels = {
+                            '10s': 'Last 10 Seconds', 
+                            '30m': 'Last 30 Minutes', 
+                            '1h': 'Last 1 Hour', 
+                            '5h': 'Last 5 Hours', 
+                            '24h': 'Last 24 Hours'
+                        };
+                        
+                        periods.forEach(p => {
+                            const stat = data.window_stats[p];
+                            if (stat) {
+                                const row = document.createElement('tr');
+                                row.className = "border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors";
+                                
+                                const carPct = getPercent(stat.cars, stat.total_volume);
+                                const motorPct = getPercent(stat.motors, stat.total_volume);
+
+                                row.innerHTML = `
+                                    <td class="px-4 py-3 font-medium text-white">${labels[p]}</td>
+                                    <td class="px-4 py-3 text-blue-400 font-bold">${stat.total_volume}</td>
+                                    <td class="px-4 py-3 text-green-400">${stat.cars} <span class="text-xs text-slate-500 ml-1">(${carPct})</span></td>
+                                    <td class="px-4 py-3 text-yellow-400">${stat.motors} <span class="text-xs text-slate-500 ml-1">(${motorPct})</span></td>
+                                    <td class="px-4 py-3 text-right text-xs text-gray-500">${stat.avg_density} avg density</td>
+                                `;
+                                tbody.appendChild(row);
+                            }
+                        });
+                    }
+                }
+                
+                // Update Sidebar Badges
+                if (data.sources) {
+                    // Cache sources for export modal
+                    window.CCTV_SOURCES = Object.entries(data.sources).map(([id, stats]) => ({ id, name: stats.name }));
+                    Object.entries(data.sources).forEach(([id, stats]) => {
+                        const badge = document.getElementById(`badge-${id}`);
+                        if (badge) {
+                            badge.innerText = stats.accumulated_count;
+                            badge.classList.remove('hidden');
+                        }
+                    });
+                }
+
+            } catch (error) {
+                console.error('Error fetching stats:', error);
+            }
+        }
+
+        // Toggle Video Section
+        function toggleVideo() {
+            const videoSection = document.getElementById('video-section');
+            const videoIcon = document.getElementById('video-icon');
+            const videoText = document.getElementById('video-text');
+            const videoImg = document.getElementById('video-stream');
+            
+            if (videoSection.classList.contains('hidden')) {
+                // Show Video
+                videoSection.classList.remove('hidden');
+                videoIcon.classList.remove('fa-video-slash');
+                videoIcon.classList.add('fa-video');
+                videoText.innerText = "Hide Video Monitor";
+                
+                // Force reload video stream to ensure connection
+                // Add timestamp to prevent caching
+                videoImg.src = getVideoFeedUrl() + '?t=' + new Date().getTime();
+                
+            } else {
+                // Hide Video
+                videoSection.classList.add('hidden');
+                videoIcon.classList.remove('fa-video');
+                videoIcon.classList.add('fa-video-slash');
+                videoText.innerText = "Show Video Monitor";
+            }
+        }
+
+        async function updateStream() {
+            const urlInput = document.getElementById('stream-url');
+            const url = urlInput.value.trim();
+            if (!url) return alert("Please enter a URL");
+            
+            const btn = document.querySelector('button[onclick="updateStream()"]');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/update_source', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url }),
+                });
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    btn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                    btn.classList.add('bg-green-600', 'hover:bg-green-700');
+                    btn.innerHTML = '<i class="fas fa-check"></i>';
+                    
+                    // Force reload video stream
+                    const videoImg = document.getElementById('video-stream');
+                    const currentSrc = videoImg.src.split('?')[0];
+                    videoImg.src = currentSrc + '?t=' + new Date().getTime();
+
+                    setTimeout(() => {
+                        btn.innerHTML = originalHTML;
+                        btn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                        btn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                        btn.disabled = false;
+                        urlInput.value = ''; 
+                    }, 2000);
+                    
+                } else {
+                    alert("Error: " + result.message);
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert("Failed to connect to server");
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+            }
+        }
+
+        // Poll stats every 1 second
+        setInterval(fetchStats, 1000);
+        
+        // Poll history every 30 seconds
+        setInterval(fetchHistory, 30000);
+
+        // Initial Fetch
+        fetchHistory();
+
+        function resetData() {
+            // Open Modal
+            document.getElementById('reset-login-modal').classList.remove('hidden');
+            document.getElementById('reset-username').value = '';
+            document.getElementById('reset-password').value = '';
+            document.getElementById('reset-username').focus();
+        }
+
+        function openExportModal() {
+            const modal = document.getElementById('export-modal');
+            const sel = document.getElementById('export-camera');
+            // Populate camera list once
+            if (sel.options.length <= 1 && window.CCTV_SOURCES) {
+                Object.values(window.CCTV_SOURCES).forEach(src => {
+                    const opt = document.createElement('option');
+                    opt.value = src.id;
+                    opt.text = src.name || src.id;
+                    sel.appendChild(opt);
+                });
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function closeExportModal() {
+            document.getElementById('export-modal').classList.add('hidden');
+        }
+
+        function submitExport() {
+            const cam = document.getElementById('export-camera').value;
+            const start = document.getElementById('export-start').value; // "YYYY-MM-DDTHH:MM"
+            const end = document.getElementById('export-end').value;
+            const qs = new URLSearchParams();
+            if (cam && cam !== 'all') qs.append('camera_id', cam);
+            if (start) qs.append('start', start.replace('T', ' '));
+            if (end) qs.append('end', end.replace('T', ' '));
+            const url = '/export/csv' + (qs.toString() ? ('?' + qs.toString()) : '');
+            window.open(url, '_blank');
+            closeExportModal();
+        }
+        function closeResetModal() {
+            document.getElementById('reset-login-modal').classList.add('hidden');
+        }
+
+        async function submitReset() {
+            const username = document.getElementById('reset-username').value;
+            const password = document.getElementById('reset-password').value;
+            
+            if (!username || !password) {
+                alert("Please enter username and password.");
+                return;
+            }
+
+            if (!confirm("Are you sure you want to ERASE ALL DATA? This cannot be undone.")) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/reset_data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    alert("All data erased successfully.");
+                    closeResetModal();
+                    resetStatsUI();
+                    // Clear sidebar badges immediately
+                    const badges = document.querySelectorAll('[id^="badge-"]');
+                    badges.forEach(b => {
+                        b.innerText = "0";
+                        b.classList.add('hidden');
+                    });
+                    // Refresh
+                    fetchStats();
+                } else {
+                    alert("Failed: " + result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert("Failed to connect to server");
+            }
+        }
+
+    </script>
+{% endblock %}

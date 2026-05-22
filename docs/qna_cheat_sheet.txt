@@ -1,0 +1,36 @@
+# CONTEKAN TANYA JAWAB (Q&A CHEAT SHEET)
+
+## Q1: Soal Logika Prediksi (Pertanyaan Teman)
+**Tanya:** "Kalau cuma ambil rata-rata dari minggu lalu, kan cuma tau traffic naik/turun. Kok bisa tau itu Macet atau tidak?"
+
+**Jawab:**
+"Betul, rata-rata itu menghasilkan angka Volume (misal: 1.200 kendaraan).
+Tapi sistem tidak berhenti di situ. Angka volume itu kita bandingkan dengan **Threshold (Ambang Batas)** kapasitas jalan.
+
+Logikanya seperti Pipa Air:
+1. Kita tau pipa (jalan) ini cuma lancar kalau airnya di bawah 500 liter/jam.
+2. Data historis bilang, biasanya jam segini air yang lewat rata-rata 1.200 liter/jam.
+3. Kesimpulannya: Pasti mampet/macet.
+
+Jadi status 'MACET' itu muncul bukan karena 'lebih banyak dari kemarin', tapi karena **'melebihi batas wajar jalan'** (Volume > Threshold)."
+
+---
+
+## Q2: Akurasi Prediksi
+**Tanya:** "Seberapa akurat prediksinya? Kalau tiba-tiba ada kecelakaan gimana?"
+
+**Jawab:**
+"Prediksi ini berbasis **Pola Kebiasaan (Historical Pattern)**. Akurasinya tinggi untuk kondisi normal (hari kerja/libur biasa).
+Namun, sistem ini memisahkan antara **Prediksi** dan **Real-time**.
+- Jika ada kecelakaan *sekarang*, fitur **Real-time Monitoring** (CCTV) akan langsung mendeteksi macet (Warna Merah), meskipun prediksinya bilang Lancar.
+- Jadi Prediksi untuk perencanaan, Real-time untuk penanganan insiden."
+
+---
+
+## Q3: Bedanya sama Google Maps?
+**Tanya:** "Apa bedanya sistem ini sama Google Maps?"
+
+**Jawab:**
+"Google Maps berbasis **GPS HP** pengguna (Crowdsourcing). Mereka tau macet karena banyak HP yang diam di jalan.
+Sistem kita berbasis **Computer Vision (CCTV)**. Kita tau macet karena kita 'melihat' dan 'menghitung' jumlah fisiknya langsung.
+Kelebihan kita: Kita punya data **Klasifikasi** (berapa motor vs mobil). Google Maps tidak tau itu motor atau mobil, cuma tau itu 'pengguna jalan'. Data klasifikasi ini penting untuk kebijakan ganjil-genap atau jalur khusus motor."
